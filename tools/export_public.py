@@ -7,7 +7,7 @@ import subprocess
 import zipfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-ROOT_FILES = {'pubspec.yaml', 'pubspec.lock', 'analysis_options.yaml', 'README.md', 'LICENSE', '.gitignore', 'THIRD_PARTY_NOTICES.md'}
+ROOT_FILES = {'AGENTS.md', 'pubspec.yaml', 'pubspec.lock', 'analysis_options.yaml', 'README.md', 'LICENSE', '.gitignore', 'THIRD_PARTY_NOTICES.md'}
 PREFIXES = ('licenses/', 'lib/', 'assets/', 'test/', 'android/app/', 'android/gradle/', 'ios/Runner/', 'ios/RunnerTests/', 'ios/Runner.xcodeproj/', 'ios/Runner.xcworkspace/', 'third_party/flyer_chat_text_message/', 'server/monitor/', 'server/quota_history/', 'tools/', '.github/workflows/')
 EXTRA = {'android/build.gradle', 'android/settings.gradle', 'android/gradle.properties', 'android/gradlew', 'android/gradlew.bat', 'ios/Flutter/Debug.xcconfig', 'ios/Flutter/Release.xcconfig', 'ios/Flutter/AppFrameworkInfo.plist', 'ios/.gitignore', 'docs/PUBLIC-BUILD.md'}
 DENIED_PARTS = {'.git', '.dart_tool', 'build', 'Pods', '.symlinks', 'ephemeral', '__pycache__', 'xcuserdata', 'node_modules'}

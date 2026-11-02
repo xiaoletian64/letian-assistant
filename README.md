@@ -1,5 +1,7 @@
 # 乐天助手 · Letian Assistant
 
+使用 Minis 或其他代码助手修改时，请先阅读 [AGENTS.md](AGENTS.md)，遵守双端同步、隐私和验证要求。
+
 A Flutter client for personal services, device management, conversations, quota history and read-only server monitoring. Android and iOS share the same business UI. Native capabilities use platform-specific implementations.
 
 This repository contains generic source only. It contains no production server configuration, account data, signing materials, database, or private history. Generic builds start at a configuration-required screen and do not connect to a deployment.
