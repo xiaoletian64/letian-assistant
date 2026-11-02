@@ -65,9 +65,10 @@ class QuotaAccount {
     this.windows, {
     dynamic sourceTime,
     this.error = '',
+    this.source = '',
   }) : observed = sceneTime(sourceTime),
        sourceDate = sceneDate(sourceTime);
-  final String platform, name, observed, error;
+  final String platform, name, observed, error, source;
   final DateTime? sourceDate;
   final List<QuotaWindow> windows;
   bool get stale =>
@@ -137,13 +138,23 @@ List<QuotaAccount> quotaAccounts(Map raw) {
         : limit != null && limit > 0 && left != null && left <= limit
         ? left / limit * 100
         : null;
-    String amount(double n) =>
-        n == n.truncateToDouble() ? n.toStringAsFixed(0) : '$n';
+    String amount(double n) {
+      final parts = (n == n.truncateToDouble() ? n.toStringAsFixed(0) : '$n')
+          .split('.');
+      final whole = parts.first.replaceAllMapped(
+        RegExp(r'\B(?=(\d{3})+(?!\d))'),
+        (_) => ',',
+      );
+      return parts.length == 1 ? whole : '$whole.${parts.last}';
+    }
+
     final totalText = limit == null ? '总量未提供' : '总量 ${amount(limit)}';
     final usedText = used == null ? '已用未提供' : '已用 ${amount(used)}';
     final leftText = left == null ? '剩余额度未提供' : '剩余 ${amount(left)} credits';
     return QuotaWindow(
-      '${q['name'] ?? 'Token Plan'}',
+      q['name'] == 'month_total_token'
+          ? '每月 Token 额度'
+          : '${q['name'] ?? 'Token Plan'}',
       '$totalText · $usedText · $leftText${percent == null ? '' : '（${quotaPercent(percent)}%）'}',
       remaining: percent,
       reset: q['reset_at'] == null
@@ -239,6 +250,7 @@ List<QuotaAccount> quotaAccounts(Map raw) {
         '${a['name'] ?? '平台账号'}',
         windows,
         sourceTime: ts,
+        source: '直接采集',
         error: windows.isEmpty ? '该来源暂未提供可展示的额度字段' : '',
       ),
     );
@@ -295,7 +307,14 @@ List<QuotaAccount> quotaAccounts(Map raw) {
       final ts = a['ts'] ?? group['updated_at'];
       final windows = <QuotaWindow>[];
       if (e.key == 'mimo' && a['quota'] is Map) {
-        windows.add(mimoQuota(sceneMap(a['quota'])));
+        windows.add(
+          mimoQuota({
+            ...sceneMap(a['quota']),
+            if (sceneMap(a['quota'])['name'] == null &&
+                '${a['n']}'.endsWith('-month_total_token'))
+              'name': 'month_total_token',
+          }),
+        );
       } else if (e.key == 'codex') {
         for (final key in ['fh', 'sd']) {
           if (a[key] is Map && (a[key] as Map).isNotEmpty) {
@@ -345,7 +364,9 @@ List<QuotaAccount> quotaAccounts(Map raw) {
         final remain = p != null && p >= 0 && p <= 100 ? p : null;
         windows.add(
           QuotaWindow(
-            '周期以来源为准',
+            e.key == 'mimo' && '${a['n']}'.endsWith('-month_total_token')
+                ? '每月 Token 额度'
+                : '周期以来源为准',
             remain != null && e.key != 'mimo'
                 ? '剩余 ${sceneDecimal(remain)}%'
                 : rem.isEmpty
@@ -358,9 +379,12 @@ List<QuotaAccount> quotaAccounts(Map raw) {
       result.add(
         QuotaAccount(
           names[e.key] ?? e.key,
-          '${a['n'] ?? '账号 ${i + 1}'}',
+          e.key == 'mimo' && '${a['n']}'.startsWith('MiMo-standard:year-')
+              ? '标准套餐（年付）'
+              : '${a['n'] ?? '账号 ${i + 1}'}',
           windows,
           sourceTime: ts,
+          source: '推送采集',
         ),
       );
     }

@@ -25,7 +25,7 @@ void main() {
       }).first;
       expect(
         a.windows.single.value,
-        '总量 132000000000 · 已用 40167631752 · 剩余 91832368248 credits（69.57%）',
+        '总量 132,000,000,000 · 已用 40,167,631,752 · 剩余 91,832,368,248 credits（69.57%）',
       );
       expect(a.windows.single.reset, contains('2026-11-27'));
     },
@@ -47,7 +47,9 @@ void main() {
         },
       },
     }).first;
-    expect(a.windows.single.value, contains('已用 40167631752'));
+    expect(a.name, '标准套餐（年付）');
+    expect(a.windows.single.period, '每月 Token 额度');
+    expect(a.windows.single.value, contains('已用 40,167,631,752'));
     expect(a.windows.single.remaining, 69.57);
     expect(a.windows.single.reset, '重置时间未提供');
   });

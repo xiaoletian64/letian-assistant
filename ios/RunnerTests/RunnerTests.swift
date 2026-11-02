@@ -16,4 +16,11 @@ final class RunnerTests: XCTestCase {
     XCTAssertNil(LetianURLRules.external("https://u@example.test"))
     XCTAssertNil(LetianURLRules.external("javascript:alert(1)"))
   }
+  func testNotificationEventIdentifier() {
+    XCTAssertEqual(NotificationEventRules.identifier("safe_event-123"), "safe_event-123")
+    for value in ["", "../private", "x?token=y", "事件", String(repeating: "a", count: 129)] {
+      XCTAssertNil(NotificationEventRules.identifier(value))
+    }
+  }
+
 }

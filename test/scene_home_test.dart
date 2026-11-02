@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -23,7 +24,18 @@ const catalog = {
   ],
 };
 void main() {
-  setUp(() => SharedPreferences.setMockInitialValues({'token': 'alice'}));
+  setUp(() {
+    SharedPreferences.setMockInitialValues({'token': 'alice'});
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('site.zhangyue.vault/notifications'),
+          (call) async => call.method == 'status'
+              ? {'authorization': 'unsupported', 'background_available': false}
+              : call.method == 'clearBindings'
+              ? true
+              : null,
+        );
+  });
   testWidgets(
     'shell shows accounts and source state, hospital stays original',
     (t) async {
@@ -92,6 +104,40 @@ void main() {
       expect(find.byType(PluginPage), findsOneWidget);
     },
   );
+  testWidgets('server monitor home entry follows authorized directory', (
+    t,
+  ) async {
+    var authorized = true;
+    apiClient = MockClient((r) async {
+      if (r.url.path == '/api/me') return response({'username': 'alice'});
+      if (r.url.path == '/api/hub/plugins') {
+        return response({
+          'schema_version': 2,
+          'plugins': [
+            if (authorized)
+              {
+                'id': 'server-monitor',
+                'title': '服务器监控',
+                'renderer': 'server-monitor',
+                'owner_only': true,
+              },
+          ],
+        });
+      }
+      return response({'servers': []});
+    });
+    await t.pumpWidget(const MaterialApp(home: SceneShell()));
+    await t.pumpAndSettle();
+    expect(find.byKey(const ValueKey('server-monitor-entry')), findsOneWidget);
+    await t.tap(find.byKey(const ValueKey('server-monitor-entry')));
+    await t.pumpAndSettle();
+    expect(find.byType(ServerMonitorPage), findsOneWidget);
+    await t.pumpWidget(const SizedBox());
+    authorized = false;
+    await t.pumpWidget(const MaterialApp(home: SceneShell()));
+    await t.pumpAndSettle();
+    expect(find.byKey(const ValueKey('server-monitor-entry')), findsNothing);
+  });
   testWidgets(
     'detail clears old-account data after token changes and refresh fails',
     (t) async {

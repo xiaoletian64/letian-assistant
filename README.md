@@ -16,6 +16,8 @@ SQLite history records quota observations and distinguishes unknown values, sour
 
 Android APK installation and Android companion-app discovery have no direct iOS equivalent. iOS uses TestFlight updates, system authentication, document selection, previews and explicit backup uploads. Compilation is not proof of real-device functional acceptance.
 
+Android system notifications use an explicitly enabled foreground monitor with a visible stop action; power management can delay or stop monitoring. iOS remote notifications require APNs registration and private server authorization. Notification permission alone is not proof that background delivery is configured. See [notification boundary](server/notifications/README.md).
+
 Tibo's 28-day challenge card opens an independently maintained announcement tracker; announcements are separate from observed account resets.
 
 ## Privacy and licenses

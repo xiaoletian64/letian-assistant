@@ -1,5 +1,7 @@
 """Export reviewed source only, never a Git history or local build state."""
 import argparse
+import json
+import urllib.parse
 import pathlib
 import re
 import shutil
@@ -8,15 +10,16 @@ import zipfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 ROOT_FILES = {'AGENTS.md', 'pubspec.yaml', 'pubspec.lock', 'analysis_options.yaml', 'README.md', 'LICENSE', '.gitignore', 'THIRD_PARTY_NOTICES.md'}
-PREFIXES = ('licenses/', 'lib/', 'assets/', 'test/', 'android/app/', 'android/gradle/', 'ios/Runner/', 'ios/RunnerTests/', 'ios/Runner.xcodeproj/', 'ios/Runner.xcworkspace/', 'third_party/flyer_chat_text_message/', 'server/monitor/', 'server/quota_history/', 'tools/', '.github/workflows/')
+PREFIXES = ('licenses/', 'lib/', 'assets/', 'test/', 'android/app/', 'android/gradle/', 'ios/Runner/', 'ios/RunnerTests/', 'ios/Runner.xcodeproj/', 'ios/Runner.xcworkspace/', 'third_party/flyer_chat_text_message/', 'server/notifications/', 'server/monitor/', 'server/quota_history/', 'tools/', '.github/workflows/')
 EXTRA = {'android/build.gradle', 'android/settings.gradle', 'android/gradle.properties', 'android/gradlew', 'android/gradlew.bat', 'ios/Flutter/Debug.xcconfig', 'ios/Flutter/Release.xcconfig', 'ios/Flutter/AppFrameworkInfo.plist', 'ios/.gitignore', 'docs/PUBLIC-BUILD.md'}
-DENIED_PARTS = {'.git', '.dart_tool', 'build', 'Pods', '.symlinks', 'ephemeral', '__pycache__', 'xcuserdata', 'node_modules'}
+DENIED_PARTS = {'.gradle', '.kotlin', '.git', '.dart_tool', 'build', 'Pods', '.symlinks', 'ephemeral', '__pycache__', 'xcuserdata', 'node_modules'}
 BINARY = {'.png', '.jar'}
 PRIVATE = re.compile(rb'https?://[^\s\"\']+\.site\b|(?<![\w.])(?!(?:127\.0\.0\.1|0\.0\.0\.0)\b)(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?![\w.])|/Users/[A-Za-z0-9_.-]+|/root/\.local|-----BEGIN (?:RSA |EC |OPENSSH |ENCRYPTED )?PRIVATE KEY-----|gh[pousr]_[A-Za-z0-9]{20,}|[A-Za-z0-9_-]+@[A-Za-z0-9.-]+\.(?:com|cn|net)\b')
 
 def allowed(path):
     name = path.as_posix()
     if any(x in DENIED_PARTS for x in path.parts): return False
+    if path.name == '.env' or path.name.startswith('.env.') or path.name.endswith('.env') or path.name in {'credentials.json','service-account.json','google-services.json'} or path.name.startswith('firebase-adminsdk'): return False
     if '.bak' in path.name or path.name.endswith(('~','.log','.pyc','.iml','.ipa','.apk','.p12','.pem','.key','.cer','.mobileprovision')): return False
     if path.name in {'local.properties','key.properties','Generated.xcconfig','GeneratedPluginRegistrant.h','GeneratedPluginRegistrant.m','flutter_export_environment.sh','.flutter-plugins-dependencies'}: return False
     return name in ROOT_FILES or name in EXTRA or name.startswith(PREFIXES)
@@ -34,6 +37,14 @@ def scan(path, tracked=False):
         rel = p.relative_to(path)
         if not allowed(rel): findings.append(str(rel) + ': unexpected file'); continue
         raw = p.read_bytes()
+        if rel.as_posix() == 'assets/runtime-config.json':
+            try:
+                config=json.loads(raw)
+                urls=[v for k,v in config.items() if k!='schema_version' and v]
+                if config.get('schema_version')!=1 or any(not isinstance(v,str) or urllib.parse.urlsplit(v).hostname!='example.invalid' for v in urls):
+                    findings.append(str(rel)+': configured runtime asset is private')
+            except (ValueError,TypeError,AttributeError): findings.append(str(rel)+': invalid runtime placeholder')
+
         if PRIVATE.search(raw): findings.append(str(rel) + ': private identifier or credential pattern')
         if p.suffix == '.jar':
             with zipfile.ZipFile(p) as z:

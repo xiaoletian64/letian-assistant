@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'notifications.dart';
 import 'dart:convert';
 import 'package:crypto/crypto.dart' as sha256_lib;
 import 'package:flutter/services.dart';
@@ -35,11 +36,12 @@ bool _updateDialogVisible = false;
 
 String get baseUrl => runtimeConfig.apiBaseUrl;
 String get otaUrl => runtimeConfig.updateManifestUrl;
-const currentVersion = '2.11.0';
-const currentVersionCode = 44;
+const currentVersion = '2.12.0';
+const currentVersionCode = 45;
 
 Future<Map<String, dynamic>?> checkOta() async {
-  if (defaultTargetPlatform == TargetPlatform.iOS || !runtimeConfig.configured) {
+  if (defaultTargetPlatform == TargetPlatform.iOS ||
+      !runtimeConfig.configured) {
     return null;
   }
   try {
@@ -326,6 +328,17 @@ Future<dynamic> apiPost(String path, Map<String, dynamic> body) async =>
           .timeout(const Duration(seconds: 30)),
     );
 
+Future<void> clearAlertsBeforeLogout(
+  BuildContext context,
+  String? credential,
+) async {
+  try {
+    await clearNotificationBinding(bearerToken: credential);
+  } catch (_) {
+    if (context.mounted) notice(context, '本机通知已关闭；服务器解绑暂未确认');
+  }
+}
+
 void notice(BuildContext c, String message) {
   if (c.mounted) {
     ScaffoldMessenger.of(c).showSnackBar(SnackBar(content: Text(message)));
@@ -406,6 +419,9 @@ Widget errorState(BuildContext c, String error, VoidCallback retry) => Center(
         if (error.contains('登录已过期'))
           TextButton(
             onPressed: () async {
+              final credential = await token();
+              if (!c.mounted) return;
+              await clearAlertsBeforeLogout(c, credential);
               await (await _prefs()).remove('token');
               if (c.mounted) {
                 Navigator.of(c).pushAndRemoveUntil(
@@ -545,7 +561,10 @@ class _LockScreenState extends State<LockScreen> {
         FilledButton(onPressed: _pw, child: const Text('密码解锁')),
         TextButton(
           onPressed: () async {
-            (await _prefs()).remove('token');
+            final credential = await token();
+            if (!context.mounted) return;
+            await clearAlertsBeforeLogout(context, credential);
+            await (await _prefs()).remove('token');
             if (context.mounted) {
               Navigator.pushReplacement(
                 context,

@@ -313,6 +313,9 @@ class _HomePageState extends State<HomePage> {
         ),
       );
       if (confirmed != true) return;
+      final credential = await token();
+      if (!mounted) return;
+      await clearAlertsBeforeLogout(context, credential);
       await (await _prefs()).remove('token');
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(

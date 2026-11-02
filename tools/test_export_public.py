@@ -4,6 +4,14 @@ class PrivacyTests(unittest.TestCase):
     def test_private_state_excluded(self):
         for p in ['.git/config','android/local.properties','lib/main.dart.bak-old','build/app.apk','ios/Runner/key.p12','server/router-reliability/original/a.py']:
             self.assertFalse(allowed(pathlib.Path(p)),p)
+    def test_env_and_private_provider_files_rejected_inside_allowed_prefixes(self):
+        for name in ['server/notifications/.env','server/notifications/production.env','assets/service-account.json','assets/firebase-adminsdk-private.json']:
+            self.assertFalse(allowed(pathlib.Path(name)),name)
+    def test_configured_runtime_asset_is_not_public_source(self):
+        with tempfile.TemporaryDirectory() as d:
+            p=pathlib.Path(d);(p/'assets').mkdir()
+            (p/'assets/runtime-config.json').write_text('{"schema_version":1,"api_base_url":"https://private.example.org"}')
+            self.assertTrue(scan(p))
     def test_detects_sensitive_material(self):
         with tempfile.TemporaryDirectory() as d:
             p=pathlib.Path(d); (p/'lib').mkdir()

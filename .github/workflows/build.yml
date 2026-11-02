@@ -27,6 +27,7 @@ jobs:
       - run: python3 -m unittest discover -s tools -p 'test_*.py'
       - run: python3 -m unittest discover -s server/monitor -p 'test_*.py'
       - run: python3 -m unittest discover -s server/quota_history -p 'test_*.py'
+      - run: python3 -m unittest discover -s server/notifications -p 'test_*.py'
       - run: python3 tools/export_public.py --scan . --tracked
   android:
     needs: verify

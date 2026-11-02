@@ -60,6 +60,7 @@ class _SceneShellState extends State<SceneShell> with WidgetsBindingObserver {
     errors.clear();
     directory.clear();
     username = '';
+    await clearAlertsBeforeLogout(context, captured);
     await prefs.remove('token');
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
@@ -129,6 +130,8 @@ class _SceneShellState extends State<SceneShell> with WidgetsBindingObserver {
         values.removeWhere((key, _) => !allowed(key));
         errors.removeWhere((key, _) => !allowed(key));
       });
+      unawaited(syncNotificationBinding().catchError((_) {}));
+      unawaited(openPendingNotification(captured, version));
       const paths = {
         'quota': '/api/quota/summary',
         'vehicles': '/api/hub/vehicles',
@@ -230,6 +233,20 @@ class _SceneShellState extends State<SceneShell> with WidgetsBindingObserver {
     tab = next;
     visited.add(next);
   });
+  Future<void> openPendingNotification(String captured, int version) async {
+    try {
+      final event = await consumeNotificationOpenEvent();
+      if (event == null || !await current(captured, version)) return;
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const NotificationsPage()),
+      );
+    } catch (_) {
+      /* Notification access never blocks normal startup. */
+    }
+  }
+
   Future<void> open(String id) async {
     if (!allowed(id)) return;
     final descriptor = directory.firstWhere((p) => p['id'] == id);
@@ -487,6 +504,27 @@ class _SceneShellState extends State<SceneShell> with WidgetsBindingObserver {
                           ),
                         ),
                       ),
+                    if (allowed('server-monitor') && filter == '全部')
+                      sceneSurface(
+                        child: Material(
+                          color: Colors.transparent,
+                          child: ListTile(
+                            key: const ValueKey('server-monitor-entry'),
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(
+                              Icons.monitor_heart_outlined,
+                              color: sceneBlue,
+                            ),
+                            title: const Text(
+                              '服务器监控',
+                              style: TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                            subtitle: const Text('查看服务器运行状态与资源使用情况'),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () => open('server-monitor'),
+                          ),
+                        ),
+                      ),
                     if (allowed('lobsterchat') &&
                         (filter == '全部' || filter == 'AI工作'))
                       sceneSurface(
@@ -711,6 +749,15 @@ class _SceneShellState extends State<SceneShell> with WidgetsBindingObserver {
                 title: const Text('应用锁'),
                 subtitle: const Text('使用手机锁屏验证保护应用'),
                 onTap: () => accountSetting(context, 'lock'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.notifications_outlined),
+                title: const Text('通知提醒'),
+                subtitle: const Text('额度、余额与服务器状态'),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const NotificationsPage()),
+                ),
               ),
               ListTile(
                 leading: const Icon(Icons.system_update),
@@ -961,8 +1008,33 @@ List<Widget> quotaPlatformCards(List<QuotaAccount> accounts) {
               ),
             ],
           ),
-          for (final account in entry.value)
-            QuotaAccountCard(account: account, showPlatform: false),
+          if (entry.key == 'Cursor' &&
+              entry.value.any((a) => a.source == '直接采集')) ...[
+            const Text(
+              '主来源：直接采集',
+              style: TextStyle(fontSize: 12, color: sceneMuted),
+            ),
+            for (final account in entry.value.where((a) => a.source != '推送采集'))
+              QuotaAccountCard(account: account, showPlatform: false),
+            if (entry.value.any((a) => a.source == '推送采集'))
+              Material(
+                color: Colors.transparent,
+                child: ExpansionTile(
+                  title: Text(
+                    '推送来源详情（${entry.value.where((a) => a.source == '推送采集').length} 个账号）',
+                  ),
+                  subtitle: const Text('备用观测 · 账号身份未核对，不合并或累加'),
+                  children: [
+                    for (final account in entry.value.where(
+                      (a) => a.source == '推送采集',
+                    ))
+                      QuotaAccountCard(account: account, showPlatform: false),
+                  ],
+                ),
+              ),
+          ] else
+            for (final account in entry.value)
+              QuotaAccountCard(account: account, showPlatform: false),
         ],
       ),
     );

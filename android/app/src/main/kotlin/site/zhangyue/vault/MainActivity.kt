@@ -1,6 +1,8 @@
 package site.zhangyue.vault
 
 import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.Activity
 import android.app.DownloadManager
 import android.content.Context
@@ -10,10 +12,12 @@ import android.database.Cursor
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.provider.Settings
 import android.provider.DocumentsContract
 import android.provider.OpenableColumns
 import android.util.Base64
 import androidx.annotation.NonNull
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
@@ -28,6 +32,36 @@ import java.net.URL
 import java.security.MessageDigest
 
 class MainActivity : FlutterActivity() {
+    private var notificationPermissionResult: MethodChannel.Result? = null
+    private val notificationPermissionRequest = 4210
+    private val notificationChannelID = "letian_alerts"
+    private var pendingNotificationEvent: String? = null
+
+    private fun notificationStatus(): Map<String, Any?> {
+        val manager = NotificationManagerCompat.from(this)
+        val runtimeAllowed = Build.VERSION.SDK_INT < 33 ||
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        val channelAllowed = Build.VERSION.SDK_INT < 26 ||
+            getSystemService(NotificationManager::class.java).getNotificationChannel(notificationChannelID)?.importance != NotificationManager.IMPORTANCE_NONE
+        return NotificationPolicy.status(Build.VERSION.SDK_INT,
+            manager.areNotificationsEnabled() && runtimeAllowed && channelAllowed,
+            getSharedPreferences("notifications", MODE_PRIVATE).getBoolean("permission_requested", false), MonitorRuntime.running)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        pendingNotificationEvent = intent.getStringExtra("letian_notification_event_id")?.takeIf { MonitorPolicy.safeID(it) }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == notificationPermissionRequest) {
+            notificationPermissionResult?.success(notificationStatus())
+            notificationPermissionResult = null
+        }
+    }
+
     private val pendingTokens = HashMap<String, PendingWrite>()
     private var photoResult: MethodChannel.Result? = null
     private var photoUri: Uri? = null
@@ -47,6 +81,59 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(@NonNull engine: FlutterEngine) {
         super.configureFlutterEngine(engine)
+        if (Build.VERSION.SDK_INT >= 26) {
+            getSystemService(NotificationManager::class.java).createNotificationChannel(
+                NotificationChannel(notificationChannelID, "额度与服务器提醒", NotificationManager.IMPORTANCE_DEFAULT))
+        }
+        pendingNotificationEvent = intent?.getStringExtra("letian_notification_event_id")?.takeIf { MonitorPolicy.safeID(it) }
+        MethodChannel(engine.dartExecutor.binaryMessenger, "site.zhangyue.vault/notifications").setMethodCallHandler { call, result ->
+            when (call.method) {
+                "status" -> result.success(notificationStatus())
+                "requestPermission" -> {
+                    if (notificationPermissionResult != null) {
+                        result.error("permission_request_in_progress", "通知授权请求正在进行", null)
+                    } else if (Build.VERSION.SDK_INT >= 33 &&
+                        ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                        notificationPermissionResult = result
+                        getSharedPreferences("notifications", MODE_PRIVATE).edit().putBoolean("permission_requested", true).apply()
+                        ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), notificationPermissionRequest)
+                    } else result.success(notificationStatus())
+                }
+                "openSettings" -> {
+                    try {
+                        val settings = if (Build.VERSION.SDK_INT >= 26) Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                            .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                        else Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName"))
+                        startActivity(settings)
+                        result.success(true)
+                    } catch (_: Exception) { result.error("settings_unavailable", "无法打开系统通知设置", null) }
+                }
+                "startMonitor" -> {
+                    MonitorRuntime.start(this, call.argument<String>("server") ?: "", call.argument<String>("bearer") ?: "") { error ->
+                        if (error == null) result.success(notificationStatus())
+                        else result.error(error, "状态监测暂未启动，请检查通知权限或稍后重试", null)
+                    }
+                }
+                "stopMonitor" -> {
+                    MonitorRuntime.stop(this)
+                    result.success(notificationStatus())
+                }
+                "clearBindings" -> {
+                    MonitorRuntime.stop(this)
+                    NotificationManagerCompat.from(this).cancelAll()
+                    pendingNotificationEvent = null
+                    intent?.removeExtra("letian_notification_event_id")
+                    result.success(true)
+                }
+                "getPendingEvent" -> {
+                    result.success(pendingNotificationEvent)
+                    pendingNotificationEvent = null
+                    intent?.removeExtra("letian_notification_event_id")
+                }
+                else -> result.notImplemented()
+            }
+        }
+
         MethodChannel(engine.dartExecutor.binaryMessenger, "site.zhangyue.vault/install").setMethodCallHandler { call, result ->
             when (call.method) {
                 "installFromUrl" -> {

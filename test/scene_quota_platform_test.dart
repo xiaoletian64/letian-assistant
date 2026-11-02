@@ -28,6 +28,7 @@ void main() {
         },
       });
       for (final spec in [(390.0, 1.0), (320.0, 1.5), (320.0, 2.0)]) {
+        await t.pumpWidget(const SizedBox());
         t.view.physicalSize = Size(spec.$1, 1800);
         t.view.devicePixelRatio = 1;
         await t.pumpWidget(
@@ -45,6 +46,9 @@ void main() {
         await t.pumpAndSettle();
         expect(t.takeException(), isNull);
         expect(find.text('Cursor'), findsOneWidget);
+        expect(find.text('Cursor(pro)'), findsNothing);
+        await t.tap(find.text('推送来源详情（2 个账号）'));
+        await t.pumpAndSettle();
         expect(find.text('Cursor(pro)'), findsOneWidget);
         expect(find.text('另一真实账号（保留独立来源和周期）'), findsOneWidget);
         for (final value in [

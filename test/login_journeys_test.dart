@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -12,7 +13,18 @@ http.Response json(Object x, [int status = 200]) => http.Response(
   headers: {'content-type': 'application/json; charset=utf-8'},
 );
 void main() {
-  setUp(() => SharedPreferences.setMockInitialValues({}));
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('site.zhangyue.vault/notifications'),
+          (call) async => call.method == 'status'
+              ? {'authorization': 'unsupported', 'background_available': false}
+              : call.method == 'clearBindings'
+              ? true
+              : null,
+        );
+  });
   testWidgets('password login opens shell and binds server canonical identity', (
     t,
   ) async {
