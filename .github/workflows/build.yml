@@ -1,0 +1,84 @@
+name: Generic Flutter Android and iOS
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: generic-build-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: gradle/actions/wrapper-validation@v4
+      - name: Install pinned Flutter SDK
+        run: |
+          git clone --depth 1 --branch 3.44.0 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+      - run: flutter pub get --enforce-lockfile
+      - run: dart analyze --format machine
+      - run: flutter test --no-pub
+      - run: python3 -m unittest discover -s tools -p 'test_*.py'
+      - run: python3 -m unittest discover -s server/monitor -p 'test_*.py'
+      - run: python3 -m unittest discover -s server/quota_history -p 'test_*.py'
+      - run: python3 tools/export_public.py --scan . --tracked
+  android:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install pinned Flutter SDK
+        run: |
+          git clone --depth 1 --branch 3.44.0 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+      - run: flutter pub get --enforce-lockfile
+      - name: Build generic unsigned Android APK
+        env:
+          LETIAN_BUILD_UNSIGNED: '1'
+        run: |
+          flutter build apk --release --no-pub --target-platform android-arm,android-arm64
+          cd android
+          ./gradlew --no-daemon testReleaseUnitTest
+      - uses: actions/upload-artifact@v4
+        with:
+          name: generic-android-unsigned
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 3
+  ios:
+    needs: verify
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install pinned Flutter SDK
+        run: |
+          git clone --depth 1 --branch 3.44.0 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+      - run: flutter pub get --enforce-lockfile
+      - name: Build generic unsigned iOS app
+        run: flutter build ios --release --no-codesign --no-pub
+      - name: Package unsigned IPA
+        run: |
+          mkdir Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/
+          zip -qry generic-ios-unsigned.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: generic-ios-unsigned
+          path: generic-ios-unsigned.ipa
+          retention-days: 3

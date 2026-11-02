@@ -1,0 +1,7 @@
+[Unit]
+Description=Daily quota history backup
+[Timer]
+OnCalendar=daily
+Persistent=true
+[Install]
+WantedBy=timers.target

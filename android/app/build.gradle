@@ -1,0 +1,54 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+android {
+    namespace = "site.zhangyue.vault"
+    compileSdk = flutter.compileSdkVersion
+    ndkVersion = flutter.ndkVersion
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_1_8
+    }
+
+    signingConfigs {
+        release {
+            storeFile file(System.getenv("LETIAN_STORE_FILE") ?: "private-release.keystore")
+            storePassword System.getenv("LETIAN_STORE_PASSWORD")
+            keyAlias "notesvault"
+            keyPassword System.getenv("LETIAN_KEY_PASSWORD")
+        }
+    }
+
+    defaultConfig {
+        applicationId = "site.zhangyue.vault"
+        minSdk = flutter.minSdkVersion
+        targetSdk = flutter.targetSdkVersion
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+    }
+
+    buildTypes {
+        release {
+            if (System.getenv("LETIAN_BUILD_UNSIGNED") != "1") {
+                signingConfig = signingConfigs.release
+            }
+        }
+    }
+}
+
+flutter {
+    source = "../.."
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+}

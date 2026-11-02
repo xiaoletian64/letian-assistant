@@ -1,0 +1,196 @@
+{
+  "schema_version": 2,
+  "plugins": [
+    {
+      "id": "home",
+      "title": "我的家",
+      "subtitle": "控制设备，运行生活场景",
+      "group": "日常使用",
+      "category": "设备管理",
+      "icon": "home",
+      "renderer": "devices",
+      "min_client_code": 34
+    },
+    {
+      "id": "auth",
+      "title": "账号授权",
+      "subtitle": "连接平台，查看授权状态",
+      "group": "日常使用",
+      "category": "生活服务",
+      "icon": "qr",
+      "renderer": "authorization",
+      "min_client_code": 34
+    },
+    {
+      "id": "deals",
+      "title": "点评免费试",
+      "subtitle": "发现免费试活动，查看报名",
+      "group": "日常使用",
+      "category": "生活服务",
+      "icon": "gift",
+      "renderer": "deals",
+      "min_client_code": 34
+    },
+    {
+      "id": "camera",
+      "title": "拍摄任务",
+      "subtitle": "拍照或选择图片，完成回传",
+      "group": "日常使用",
+      "category": "设备管理",
+      "icon": "camera",
+      "renderer": "camera",
+      "min_client_code": 34
+    },
+    {
+      "id": "sessions",
+      "title": "会话镜像",
+      "subtitle": "搜索和查看 Minis 对话记录",
+      "group": "服务管理",
+      "category": "开发运维",
+      "icon": "chat",
+      "renderer": "sessions",
+      "min_client_code": 34
+    },
+    {
+      "id": "console",
+      "title": "设备控制台",
+      "subtitle": "查看服务器与服务运行状态",
+      "group": "服务管理",
+      "category": "开发运维",
+      "icon": "desktop",
+      "renderer": "console",
+      "min_client_code": 34
+    },
+    {
+      "id": "terminal",
+      "title": "服务器终端",
+      "subtitle": "执行允许的运维命令",
+      "group": "服务管理",
+      "category": "开发运维",
+      "icon": "terminal",
+      "renderer": "terminal",
+      "min_client_code": 34
+    },
+    {
+      "id": "appkey",
+      "title": "激活密钥",
+      "subtitle": "验证账号密码后查看注册密钥",
+      "group": "服务管理",
+      "category": "开发运维",
+      "icon": "key",
+      "renderer": "appkey",
+      "min_client_code": 34
+    },
+    {
+      "id": "notes",
+      "title": "笔记备份",
+      "subtitle": "下载最近的笔记整包备份",
+      "group": "日常使用",
+      "category": "生活服务",
+      "icon": "doc",
+      "renderer": "content",
+      "min_client_code": 0
+    },
+    {
+      "id": "vehicles",
+      "title": "我的车",
+      "subtitle": "查看车辆位置、电量与状态",
+      "group": "日常使用",
+      "category": "生活服务",
+      "icon": "bike",
+      "renderer": "content",
+      "min_client_code": 0
+    },
+    {
+      "id": "health",
+      "title": "运动健康",
+      "subtitle": "查看今日步数与近七天记录",
+      "group": "日常使用",
+      "category": "生活服务",
+      "icon": "health",
+      "renderer": "content",
+      "min_client_code": 0
+    },
+    {
+      "id": "hospital",
+      "title": "医院报告",
+      "subtitle": "查看并下载已同步的检查报告",
+      "group": "日常使用",
+      "category": "生活服务",
+      "icon": "doc",
+      "renderer": "content",
+      "min_client_code": 0
+    },
+    {
+      "id": "werss",
+      "title": "公众号订阅",
+      "subtitle": "阅读订阅公众号的最新文章",
+      "group": "日常使用",
+      "category": "生活服务",
+      "icon": "article",
+      "renderer": "content",
+      "min_client_code": 0
+    },
+    {
+      "id": "quota",
+      "title": "模型额度",
+      "subtitle": "查看各平台余额与额度用量",
+      "group": "服务管理",
+      "category": "开发运维",
+      "icon": "chart",
+      "renderer": "content",
+      "min_client_code": 0
+    },
+    {
+      "id": "route",
+      "title": "家里的网络",
+      "subtitle": "查看网络设备限制状态",
+      "group": "服务管理",
+      "category": "设备管理",
+      "icon": "router",
+      "renderer": "content",
+      "min_client_code": 0
+    },
+    {
+      "id": "dream",
+      "title": "事项进度",
+      "subtitle": "查看事项进展与待处理问题",
+      "group": "服务管理",
+      "category": "开发运维",
+      "icon": "night",
+      "renderer": "content",
+      "min_client_code": 0
+    },
+    {
+      "id": "gateway",
+      "title": "网关状态",
+      "subtitle": "查看运行状态，必要时重启",
+      "group": "服务管理",
+      "category": "开发运维",
+      "icon": "hub",
+      "renderer": "content",
+      "min_client_code": 0
+    },
+    {
+      "id": "lobsterchat",
+      "title": "龙虾对话",
+      "subtitle": "直接向106上的龙虾发送消息",
+      "category": "生活服务",
+      "group": "日常使用",
+      "icon": "chat",
+      "renderer": "chat",
+      "min_client_code": 39
+    },
+    {
+      "id": "server-monitor",
+      "title": "服务器监控",
+      "subtitle": "实时查看服务器资源与关键服务",
+      "group": "服务管理",
+      "category": "开发运维",
+      "icon": "server",
+      "renderer": "server-monitor",
+      "min_client_code": 44,
+      "owner_only": true
+    }
+  ]
+}

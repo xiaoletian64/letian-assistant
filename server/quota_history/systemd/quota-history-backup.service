@@ -1,0 +1,11 @@
+[Unit]
+Description=Online backup of persistent quota history
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/quota-history
+ExecStart=/usr/bin/python3 -m server.quota_history.backup
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/backups/quota-history /var/lib/quota-history

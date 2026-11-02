@@ -1,0 +1,18 @@
+[Unit]
+Description=Append existing quota cache observations (no upstream requests)
+After=network-online.target
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/quota-history.env
+User=root
+WorkingDirectory=/opt/quota-history
+ExecStart=/usr/bin/python3 -m server.quota_history.collector --include-124-cache
+UMask=0077
+StateDirectory=quota-history
+StateDirectoryMode=0700
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/lib/quota-history
+PrivateTmp=true
+TimeoutStartSec=45
