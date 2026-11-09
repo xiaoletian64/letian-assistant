@@ -11,7 +11,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 ROOT_FILES = {'AGENTS.md', 'pubspec.yaml', 'pubspec.lock', 'analysis_options.yaml', 'README.md', 'LICENSE', '.gitignore', 'THIRD_PARTY_NOTICES.md'}
 PREFIXES = ('licenses/', 'lib/', 'assets/', 'test/', 'android/app/', 'android/gradle/', 'ios/Runner/', 'ios/RunnerTests/', 'ios/Runner.xcodeproj/', 'ios/Runner.xcworkspace/', 'third_party/flyer_chat_text_message/', 'server/notifications/', 'server/monitor/', 'server/quota_history/', 'tools/', '.github/workflows/')
-EXTRA = {'android/build.gradle', 'android/settings.gradle', 'android/gradle.properties', 'android/gradlew', 'android/gradlew.bat', 'ios/Flutter/Debug.xcconfig', 'ios/Flutter/Release.xcconfig', 'ios/Flutter/AppFrameworkInfo.plist', 'ios/.gitignore', 'docs/PUBLIC-BUILD.md'}
+EXTRA = {'android/build.gradle', 'android/settings.gradle', 'android/gradle.properties', 'android/gradlew', 'android/gradlew.bat', 'ios/Flutter/Debug.xcconfig', 'ios/Flutter/Release.xcconfig', 'ios/Flutter/AppFrameworkInfo.plist', 'ios/.gitignore', 'docs/PUBLIC-BUILD.md', 'docs/CARD-OVERVIEW.md'}
 DENIED_PARTS = {'.gradle', '.kotlin', '.git', '.dart_tool', 'build', 'Pods', '.symlinks', 'ephemeral', '__pycache__', 'xcuserdata', 'node_modules'}
 BINARY = {'.png', '.jar'}
 PRIVATE = re.compile(rb'https?://[^\s\"\']+\.site\b|(?<![\w.])(?!(?:127\.0\.0\.1|0\.0\.0\.0)\b)(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?![\w.])|/Users/[A-Za-z0-9_.-]+|/root/\.local|-----BEGIN (?:RSA |EC |OPENSSH |ENCRYPTED )?PRIVATE KEY-----|gh[pousr]_[A-Za-z0-9]{20,}|[A-Za-z0-9_-]+@[A-Za-z0-9.-]+\.(?:com|cn|net)\b')
