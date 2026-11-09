@@ -76,5 +76,7 @@
 		<string>snssdk1128</string>
 		<string>dianping</string>
 	</array>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>
