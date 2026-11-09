@@ -564,13 +564,9 @@ class CollapsibleContentCard extends StatelessWidget {
       initiallyExpanded: false,
       maintainState: false,
       title: Text('${item['title'] ?? ''}'),
-      subtitle: '${item['subtitle'] ?? ''}'.isEmpty
+      subtitle: '${item['summary'] ?? item['subtitle'] ?? ''}'.isEmpty
           ? null
-          : Text(
-              '${item['subtitle']}',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
+          : Text('${item['summary'] ?? item['subtitle']}'),
       childrenPadding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
       expandedCrossAxisAlignment: CrossAxisAlignment.start,
       children: [

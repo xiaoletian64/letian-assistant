@@ -137,6 +137,7 @@ class _SceneShellState extends State<SceneShell> with WidgetsBindingObserver {
         'vehicles': '/api/hub/vehicles',
         'sessions': '/api/hub/sessions',
         'auth': '/api/qr/all',
+        'purchases': '/api/hub/plugins/open?id=purchases',
       };
       await Future.wait(
         paths.entries
@@ -201,6 +202,7 @@ class _SceneShellState extends State<SceneShell> with WidgetsBindingObserver {
         'quota' =>
           map['accounts'] is Map || map['push'] is Map || map['errors'] is Map,
         'vehicles' => map['vehicles'] is List,
+        'purchases' => map['items'] is List,
         'sessions' => map['sessions'] is List,
         'auth' => data is Map && !map.containsKey('error'),
         _ => false,
@@ -579,35 +581,55 @@ class _SceneShellState extends State<SceneShell> with WidgetsBindingObserver {
                     if (allowed('quota') && show('AI工作'))
                       KeyedSubtree(
                         key: quotaKey,
-                        child: sceneSurface(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              sceneHeading(
-                                Icons.dns_outlined,
-                                '模型额度',
-                                action: () => open('quota'),
-                              ),
-                              const Text(
-                                '全部平台 · 每个账号、每个周期分别展示',
-                                style: TextStyle(
-                                  color: sceneMuted,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              status('quota'),
-                              if (accounts.isEmpty &&
-                                  !pending.contains('quota'))
-                                const Padding(
-                                  padding: EdgeInsets.all(16),
-                                  child: Text('暂未获取额度，点击刷新重试'),
-                                ),
-                              ...quotaPlatformCards(accounts),
-                              const TiboChallengeCard(),
-                            ],
-                          ),
+                        child: BusinessSummaryCard(
+                          key: ValueKey('quota-overview-$username'),
+                          title: 'AI额度',
+                          lines: quotaOverview(accounts),
+                          status: status('quota'),
+                          onDetails: () => open('quota'),
+                          children: quotaOverviewRows(accounts),
                         ),
                       ),
+                    if (allowed('purchases') && show('居家')) ...[
+                      BusinessSummaryCard(
+                        key: ValueKey('expense-overview-$username'),
+                        title: '消费',
+                        lines: purchaseOverview(
+                          values['purchases'] ?? {},
+                          'expense',
+                        ),
+                        status: status('purchases'),
+                        onDetails: () => open('purchases'),
+                        children: [
+                          for (final item in sceneList(
+                            values['purchases']?['items'],
+                          ).where((i) => '${i['title']}'.contains('近30天明细')))
+                            ListTile(
+                              title: Text('${item['title']}'),
+                              subtitle: Text('${item['body'] ?? ''}'),
+                            ),
+                        ],
+                      ),
+                      BusinessSummaryCard(
+                        key: ValueKey('delivery-overview-$username'),
+                        title: '快递',
+                        lines: purchaseOverview(
+                          values['purchases'] ?? {},
+                          'delivery',
+                        ),
+                        status: status('purchases'),
+                        onDetails: () => open('purchases'),
+                        children: [
+                          for (final item in sceneList(
+                            values['purchases']?['items'],
+                          ).where((i) => i['type'] == 'order'))
+                            ListTile(
+                              title: Text('${item['title']}'),
+                              subtitle: Text('${item['subtitle'] ?? ''}'),
+                            ),
+                        ],
+                      ),
+                    ],
                     if (allowed('hospital') && show('健康'))
                       sceneSurface(
                         child: ListTile(
@@ -985,9 +1007,6 @@ List<Widget> quotaPlatformCards(List<QuotaAccount> accounts) {
       (account) => !separatePush || account.source != '推送采集',
     );
     final pushed = entry.value.where((account) => account.source == '推送采集');
-    final attention = entry.value
-        .where((account) => account.unavailable || account.low)
-        .length;
     return Card(
       margin: const EdgeInsets.only(top: 8),
       clipBehavior: Clip.antiAlias,
@@ -997,10 +1016,7 @@ List<Widget> quotaPlatformCards(List<QuotaAccount> accounts) {
         maintainState: false,
         leading: quotaBrandMark(entry.key),
         title: Text(entry.key),
-        subtitle: Text(
-          '${entry.value.length} 个来源账号 · 点击查看额度'
-          '${attention > 0 ? ' · $attention 个需关注' : ''}',
-        ),
+        subtitle: Text(quotaOverview(entry.value).join('\n')),
         childrenPadding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
         children: [
           if (separatePush) const Text('主来源：直接采集'),

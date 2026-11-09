@@ -21,6 +21,7 @@ const catalog = {
     {'id': 'sessions', 'title': '会话镜像', 'renderer': 'sessions'},
     {'id': 'auth', 'title': '账号授权', 'renderer': 'authorization'},
     {'id': 'hospital', 'title': '医院报告', 'renderer': 'content'},
+    {'id': 'purchases', 'title': '综合订单', 'renderer': 'content'},
   ],
 };
 void main() {
@@ -85,6 +86,14 @@ void main() {
             });
           case '/api/hub/sessions':
             return response({'sessions': [], 'generated_at': '2026-10-26'});
+          case '/api/hub/plugins/open':
+            return response({
+              'items': [],
+              'overview': {
+                'expense': ['昨日净消费 CNY 12.50', '近30天净消费 USD 8.20'],
+                'delivery': ['待发货 1 单 · 运输中 6 单（缓存状态）', '近3天签收：未知'],
+              },
+            });
           case '/api/qr/all':
             return response({
               'douyin': {'logged_in': true},
@@ -97,17 +106,17 @@ void main() {
       await t.pumpAndSettle();
       expect(find.text('充电中'), findsWidgets);
       expect(find.textContaining('平台剩余 3 天'), findsWidgets);
+      expect(find.text('昨日净消费 CNY 12.50'), findsOneWidget);
+      expect(find.text('近3天签收：未知'), findsOneWidget);
       expect(find.text('主账号'), findsNothing);
       expect(find.text('备用账号'), findsNothing);
-      for (final platform in ['OpenCode', 'Codex']) {
-        final tile = find.byKey(ValueKey('quota-platform-$platform'));
-        await t.ensureVisible(tile);
-        await t.tap(tile);
-        await t.pumpAndSettle();
-      }
-      expect(find.text('主账号'), findsOneWidget);
-      expect(find.text('备用账号'), findsOneWidget);
-      expect(find.text('每月窗口'), findsOneWidget);
+      final summary = find.byKey(const ValueKey('business-AI额度'));
+      await t.ensureVisible(summary);
+      await t.tap(find.text('AI额度'));
+      await t.pumpAndSettle();
+      expect(find.text('Codex · 主账号'), findsOneWidget);
+      expect(find.text('Codex · 备用账号'), findsOneWidget);
+      expect(find.textContaining('每月窗口'), findsWidgets);
       await t.ensureVisible(find.byKey(const ValueKey('hospital-entry')));
       await t.tap(find.byKey(const ValueKey('hospital-entry')));
       await t.pumpAndSettle();

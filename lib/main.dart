@@ -25,6 +25,7 @@ part 'plugin_catalog.dart';
 part 'content_pages.dart';
 part 'scene_models.dart';
 part 'scene_home.dart';
+part 'business_cards.dart';
 part 'lobster_chat.dart';
 part 'lobster_framework.dart';
 part 'lobster_stream.dart';
