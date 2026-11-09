@@ -37,6 +37,8 @@ class MonitorPolicyTest {
         assertFalse(MonitorPolicy.categoryEnabled("quota_reset", all + ("reset" to false)))
         assertFalse(MonitorPolicy.categoryEnabled("balance_recovered", all + ("recovery" to false)))
         assertFalse(MonitorPolicy.categoryEnabled("server_anomaly", all + ("server" to false)))
+        assertTrue(MonitorPolicy.categoryEnabled("daily_digest", mapOf("daily" to true)))
+        assertFalse(MonitorPolicy.categoryEnabled("daily_digest", all))
         assertFalse(MonitorPolicy.categoryEnabled("unknown", all))
         assertFalse(MonitorPolicy.categoryEnabled("quota_low", emptyMap()))
     }

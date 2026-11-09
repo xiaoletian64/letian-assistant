@@ -978,63 +978,43 @@ List<Widget> quotaPlatformCards(List<QuotaAccount> accounts) {
     platforms.putIfAbsent(account.platform, () => []).add(account);
   }
   return platforms.entries.map((entry) {
-    if (entry.value.length == 1) {
-      return QuotaAccountCard(account: entry.value.single);
-    }
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(top: 5),
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFCFEFF),
-        border: Border.all(color: const Color(0xFFE4EEFA)),
-        borderRadius: BorderRadius.circular(9),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    final separatePush =
+        entry.key == 'Cursor' &&
+        entry.value.any((account) => account.source == '直接采集');
+    final primary = entry.value.where(
+      (account) => !separatePush || account.source != '推送采集',
+    );
+    final pushed = entry.value.where((account) => account.source == '推送采集');
+    final attention = entry.value
+        .where((account) => account.unavailable || account.low)
+        .length;
+    return Card(
+      margin: const EdgeInsets.only(top: 8),
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        key: ValueKey('quota-platform-${entry.key}'),
+        initiallyExpanded: false,
+        maintainState: false,
+        leading: quotaBrandMark(entry.key),
+        title: Text(entry.key),
+        subtitle: Text(
+          '${entry.value.length} 个来源账号 · 点击查看额度'
+          '${attention > 0 ? ' · $attention 个需关注' : ''}',
+        ),
+        childrenPadding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
         children: [
-          Wrap(
-            spacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              quotaBrandMark(entry.key),
-              Text(
-                entry.key,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: sceneInk,
-                ),
-              ),
-            ],
-          ),
-          if (entry.key == 'Cursor' &&
-              entry.value.any((a) => a.source == '直接采集')) ...[
-            const Text(
-              '主来源：直接采集',
-              style: TextStyle(fontSize: 12, color: sceneMuted),
+          if (separatePush) const Text('主来源：直接采集'),
+          for (final account in primary)
+            QuotaAccountCard(account: account, showPlatform: false),
+          if (separatePush && pushed.isNotEmpty)
+            ExpansionTile(
+              title: Text('推送来源详情（${pushed.length} 个账号）'),
+              subtitle: const Text('备用观测 · 账号身份未核对，不合并或累加'),
+              children: [
+                for (final account in pushed)
+                  QuotaAccountCard(account: account, showPlatform: false),
+              ],
             ),
-            for (final account in entry.value.where((a) => a.source != '推送采集'))
-              QuotaAccountCard(account: account, showPlatform: false),
-            if (entry.value.any((a) => a.source == '推送采集'))
-              Material(
-                color: Colors.transparent,
-                child: ExpansionTile(
-                  title: Text(
-                    '推送来源详情（${entry.value.where((a) => a.source == '推送采集').length} 个账号）',
-                  ),
-                  subtitle: const Text('备用观测 · 账号身份未核对，不合并或累加'),
-                  children: [
-                    for (final account in entry.value.where(
-                      (a) => a.source == '推送采集',
-                    ))
-                      QuotaAccountCard(account: account, showPlatform: false),
-                  ],
-                ),
-              ),
-          ] else
-            for (final account in entry.value)
-              QuotaAccountCard(account: account, showPlatform: false),
         ],
       ),
     );
@@ -1049,146 +1029,198 @@ class QuotaAccountCard extends StatelessWidget {
   });
   final QuotaAccount account;
   final bool showPlatform;
+
+  Widget windowBody(QuotaWindow window, {bool historical = false}) {
+    final color = historical
+        ? sceneMuted
+        : window.remaining != null && window.remaining! <= 15
+        ? sceneAmber
+        : sceneBlue;
+    final primary = window.summary == null
+        ? window.value
+        : window.remaining == null
+        ? window.summary!
+        : '剩余 ${window.remaining!.toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '')}%';
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            window.period,
+            style: const TextStyle(fontSize: 12, color: sceneMuted),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            historical ? window.value : primary,
+            style: TextStyle(
+              fontSize: historical ? 14 : 23,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
+          ),
+          if (!historical && window.remaining != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 7),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: LinearProgressIndicator(
+                  value: window.remaining! / 100,
+                  minHeight: 6,
+                  color: color,
+                  backgroundColor: const Color(0xFFDFEAFC),
+                ),
+              ),
+            ),
+          if (!historical && window.summary != null && window.remaining != null)
+            Text(window.summary!, style: TextStyle(fontSize: 13, color: color)),
+          Text(
+            window.reset,
+            style: const TextStyle(fontSize: 11, color: sceneMuted),
+          ),
+          if (!historical && window.summary != null)
+            ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              childrenPadding: EdgeInsets.zero,
+              title: const Text(
+                '查看完整额度',
+                style: TextStyle(fontSize: 12, color: sceneMuted),
+              ),
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: SelectableText(
+                    window.value,
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
-  Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    margin: const EdgeInsets.only(top: 5),
-    padding: const EdgeInsets.all(8),
-    decoration: BoxDecoration(
-      color: const Color(0xFFFCFEFF),
-      border: Border.all(color: const Color(0xFFE4EEFA)),
-      borderRadius: BorderRadius.circular(9),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Wrap(
-          spacing: 8,
-          runSpacing: 3,
-          crossAxisAlignment: WrapCrossAlignment.center,
+  Widget build(BuildContext context) {
+    final unavailable = account.unavailable;
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: const Color(0xFFE4EEFA)),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (showPlatform) quotaBrandMark(account.platform),
-            if (showPlatform)
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                if (showPlatform) quotaBrandMark(account.platform),
+                if (showPlatform)
+                  Text(
+                    account.platform,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: sceneInk,
+                    ),
+                  ),
+                if (unavailable || account.low)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF3E8),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      account.status,
+                      style: const TextStyle(fontSize: 11, color: sceneAmber),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              account.name,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: sceneInk,
+              ),
+            ),
+            Text(
+              '来源更新 ${account.observed} · 北京时间',
+              style: const TextStyle(fontSize: 11, color: sceneMuted),
+            ),
+            if (unavailable) ...[
+              const SizedBox(height: 12),
               Text(
-                account.platform,
+                account.balanceOnly ||
+                        const [
+                          'DeepSeek',
+                          '腾讯云',
+                          'JEV',
+                        ].contains(account.platform)
+                    ? '当前余额未知'
+                    : '当前额度未知',
                 style: const TextStyle(
-                  fontSize: 16,
+                  fontSize: 21,
                   fontWeight: FontWeight.w800,
                   color: sceneInk,
                 ),
               ),
-            Text(
-              '来源更新 ${account.observed}',
-              style: const TextStyle(fontSize: 10, color: sceneMuted),
-            ),
+              const SizedBox(height: 4),
+              Text(
+                account.error.isNotEmpty
+                    ? account.error
+                    : account.sourceDate == null
+                    ? '未取得有效的来源时间，请刷新后再查看。'
+                    : '尚未取得有效的新数据，请刷新后再查看。',
+                style: const TextStyle(fontSize: 12, color: sceneMuted),
+              ),
+              if (account.error.isNotEmpty &&
+                  account.stale &&
+                  account.sourceDate != null)
+                const Text(
+                  '上次数据已过期',
+                  style: TextStyle(fontSize: 11, color: sceneMuted),
+                ),
+              if (account.windows.isNotEmpty)
+                ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  childrenPadding: EdgeInsets.zero,
+                  title: const Text(
+                    '查看上次观测记录',
+                    style: TextStyle(fontSize: 12, color: sceneMuted),
+                  ),
+                  subtitle: const Text(
+                    '历史记录，当前可用额度未确认',
+                    style: TextStyle(fontSize: 11, color: sceneMuted),
+                  ),
+                  children: [
+                    for (final window in account.windows)
+                      windowBody(window, historical: true),
+                  ],
+                ),
+            ] else ...[
+              for (final window in account.windows) windowBody(window),
+            ],
           ],
         ),
-        for (var i = 0; i < account.windows.length; i++)
-          Padding(
-            padding: const EdgeInsets.only(top: 5),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final w = account.windows[i];
-                final compact =
-                    constraints.maxWidth < 270 ||
-                    MediaQuery.textScalerOf(context).scale(1) > 1.2;
-                final name = Text(
-                  i == 0 ? account.name : '',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                );
-                final period = Text(
-                  w.period,
-                  style: const TextStyle(fontSize: 12, color: sceneInk),
-                );
-                final value = Text(
-                  w.value,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: w.remaining != null && w.remaining! <= 15
-                        ? const Color(0xFFFF542F)
-                        : sceneBlue,
-                    fontWeight: FontWeight.w700,
-                  ),
-                );
-                final reset = Text(
-                  w.reset,
-                  style: const TextStyle(fontSize: 10, color: sceneMuted),
-                );
-                final bar = w.remaining == null
-                    ? const SizedBox.shrink()
-                    : ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: LinearProgressIndicator(
-                          value: w.remaining! / 100,
-                          minHeight: 7,
-                          color: w.remaining! <= 15
-                              ? const Color(0xFFFF7146)
-                              : sceneBlue,
-                          backgroundColor: const Color(0xFFDFEAFC),
-                        ),
-                      );
-                return compact
-                    ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 2,
-                            children: [name, period, value],
-                          ),
-                          if (w.remaining != null)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4),
-                              child: bar,
-                            ),
-                          reset,
-                        ],
-                      )
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Expanded(flex: 20, child: name),
-                              const SizedBox(width: 6),
-                              Expanded(flex: 22, child: period),
-                              const SizedBox(width: 6),
-                              Expanded(flex: 25, child: bar),
-                              const SizedBox(width: 8),
-                              Expanded(flex: 33, child: value),
-                              if (constraints.maxWidth > 600) ...[
-                                const SizedBox(width: 8),
-                                Expanded(flex: 40, child: reset),
-                              ],
-                            ],
-                          ),
-                          if (constraints.maxWidth <= 600)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 3, left: 68),
-                              child: reset,
-                            ),
-                        ],
-                      );
-              },
-            ),
-          ),
-        if (account.error.isNotEmpty)
-          Text(
-            account.error,
-            style: const TextStyle(color: sceneAmber, fontSize: 12),
-          ),
-        if (account.stale)
-          const Text(
-            '上次观测/时间待确认 · 北京时间',
-            style: TextStyle(fontSize: 10, color: sceneMuted),
-          ),
-      ],
-    ),
-  );
+      ),
+    );
+  }
 }
 
 class VehicleStatusCard extends StatelessWidget {

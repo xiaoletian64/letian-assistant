@@ -1,0 +1,11 @@
+[Unit]
+Description=Letian morning digest at 09:30 Beijing time
+
+[Timer]
+OnCalendar=*-*-* 09:30:00 Asia/Shanghai
+AccuracySec=1s
+Persistent=false
+Unit=letian-morning.service
+
+[Install]
+WantedBy=timers.target

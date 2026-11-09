@@ -207,6 +207,7 @@ class _NotificationsPageState extends State<NotificationsPage>
   bool _monitorRunning = false, _monitorSupported = false;
   bool _background = false, _configured = false, _loading = true, _busy = false;
   static const _labels = {
+    'daily': '每日早报 · 北京时间09:30',
     'quota': '低额度',
     'balance': '低余额',
     'server': '服务器异常',
@@ -523,16 +524,77 @@ class _NotificationsPageState extends State<NotificationsPage>
           ),
           if (!_loading && _items.isEmpty) const Text('暂无通知'),
           for (final item in _items)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(
-                item['read'] == true
-                    ? Icons.notifications_none
-                    : Icons.mark_email_unread_outlined,
+            if (item['body'] is String && (item['body'] as String).isNotEmpty)
+              NotificationDigestCard(
+                key: ValueKey(item['id']),
+                item: item,
+                onRead: _busy || item['read'] == true
+                    ? null
+                    : () => _read(item),
+              )
+            else
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  item['read'] == true
+                      ? Icons.notifications_none
+                      : Icons.mark_email_unread_outlined,
+                ),
+                title: Text(item['title']?.toString() ?? '系统提醒'),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (item['body'] is String &&
+                        (item['body'] as String).isNotEmpty)
+                      SelectableText(item['body'] as String),
+                    Text(item['read'] == true ? '已读' : '标为已读'),
+                  ],
+                ),
+                onTap: _busy || item['read'] == true ? null : () => _read(item),
               ),
-              title: Text(item['title']?.toString() ?? '系统提醒'),
-              subtitle: Text(item['read'] == true ? '已读' : '标为已读'),
-              onTap: _busy || item['read'] == true ? null : () => _read(item),
+        ],
+      ),
+    );
+  }
+}
+
+/// Long daily reports stay in the list context and never mark read on expansion.
+class NotificationDigestCard extends StatelessWidget {
+  const NotificationDigestCard({super.key, required this.item, this.onRead});
+  final Map item;
+  final VoidCallback? onRead;
+
+  @override
+  Widget build(BuildContext context) {
+    final read = item['read'] == true;
+    final time = item['source_time'] == null
+        ? ''
+        : app.sceneTime(item['source_time']);
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        initiallyExpanded: false,
+        maintainState: false,
+        leading: Icon(
+          read ? Icons.drafts_outlined : Icons.mark_email_unread_outlined,
+        ),
+        title: Text(item['title']?.toString() ?? '每日早报'),
+        subtitle: Text(
+          '${read ? '已读' : '未读'}${time.isEmpty ? '' : ' · $time'}',
+        ),
+        expandedCrossAxisAlignment: CrossAxisAlignment.start,
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        children: [
+          SelectableText(
+            item['body']?.toString() ?? '',
+            style: const TextStyle(height: 1.6),
+          ),
+          const SizedBox(height: 8),
+          if (!read)
+            TextButton.icon(
+              onPressed: onRead,
+              icon: const Icon(Icons.done),
+              label: const Text('标为已读'),
             ),
         ],
       ),

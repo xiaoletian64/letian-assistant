@@ -1,0 +1,17 @@
+[Unit]
+Description=Letian owner morning digest from existing read-only sources
+After=network-online.target notes-site.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/letian-notifications
+ExecStart=/usr/bin/python3 -m server.notifications.morning run
+UMask=0077
+TimeoutStartSec=90
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/lib/letian-notifications

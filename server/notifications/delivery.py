@@ -6,7 +6,7 @@ import time
 from .service import CATEGORIES
 
 def enabled(kind,settings):
- category='server' if kind.startswith(('server_','monitor_')) else 'balance' if kind.startswith('balance_') else 'quota'
+ category='daily' if kind=='daily_digest' else 'server' if kind.startswith(('server_','monitor_')) else 'balance' if kind.startswith('balance_') else 'quota'
  return settings.get(category,True) and (not kind.endswith('_recovered') or settings.get('recovery',True)) and (kind!='quota_reset' or settings.get('reset',True))
 
 def deliver(path,sender,now=None,account_id="1"):

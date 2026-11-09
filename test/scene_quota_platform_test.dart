@@ -7,6 +7,7 @@ void main() {
     'one platform heading preserves direct and pushed Cursor accounts',
     (t) async {
       final accounts = quotaAccounts({
+        'collected_at': DateTime.now().toUtc().toIso8601String(),
         'accounts': {
           'cursor': {
             'total_percent': 25,
@@ -16,6 +17,7 @@ void main() {
         },
         'push': {
           'cursor': {
+            'updated_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
             'accounts': [
               {
                 'n': 'Cursor(pro)',
@@ -47,6 +49,9 @@ void main() {
         expect(t.takeException(), isNull);
         expect(find.text('Cursor'), findsOneWidget);
         expect(find.text('Cursor(pro)'), findsNothing);
+        expect(find.text('剩余 75%'), findsNothing);
+        await t.tap(find.text('Cursor'));
+        await t.pumpAndSettle();
         await t.tap(find.text('推送来源详情（2 个账号）'));
         await t.pumpAndSettle();
         expect(find.text('Cursor(pro)'), findsOneWidget);

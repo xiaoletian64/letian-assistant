@@ -12,7 +12,7 @@ import sqlite3
 import time
 from .store import Store
 
-CATEGORIES={'quota':True,'balance':True,'server':True,'reset':True,'recovery':True}
+CATEGORIES={'daily':True,'quota':True,'balance':True,'server':True,'reset':True,'recovery':True}
 TITLES={'quota_low':'订阅额度不足','quota_recovered':'订阅额度恢复','quota_reset':'订阅额度已重置','balance_low':'账户余额不足','balance_recovered':'账户余额恢复','monitor_unreachable':'服务器监控不可达','server_anomaly':'服务器资源异常','server_recovered':'服务器状态恢复'}
 ID=re.compile(r'^[A-Za-z0-9_-]{1,128}$')
 
@@ -40,10 +40,14 @@ class NotificationService:
     row=c.execute('SELECT payload FROM notification_settings WHERE account_id=?',(owner,)).fetchone()
     settings=dict(CATEGORIES,**(json.loads(row[0]) if row else {}))
     rows=c.execute('SELECT e.payload,r.read_at FROM alert_events e LEFT JOIN notification_reads r ON r.account_id=e.account_id AND r.event_id=e.id WHERE e.account_id=? ORDER BY e.source_time DESC,e.id LIMIT 100',(owner,)).fetchall()
-    items=[]
+    items=[];response_bytes=0
     for payload,read_at in rows:
      e=json.loads(payload);items.append({k:e.get(k) for k in ('id','series_id','type','source_time','window')})
-     items[-1].update(title=TITLES.get(e.get('type'),'状态更新'),read=read_at is not None)
+     items[-1].update(title=e.get('title','每日早报') if e.get('type')=='daily_digest' else TITLES.get(e.get('type'),'状态更新'),read=read_at is not None)
+     if e.get('type')=='daily_digest':items[-1]['body']=e.get('body','')
+     response_bytes+=len(json.dumps(items[-1]).encode())
+     if response_bytes>180000:
+      items.pop();break
     unread=c.execute('SELECT count(*) FROM alert_events e LEFT JOIN notification_reads r ON r.account_id=e.account_id AND r.event_id=e.id WHERE e.account_id=? AND r.read_at IS NULL',(owner,)).fetchone()[0]
     return 200,{'items':items,'unread':unread,'settings':settings,'push':self.push_status,'thresholds':{'CNY':5,'USD':1,'subscription_remaining_percent':10}}
    if method=='POST' and path=='/api/hub/notifications/settings':

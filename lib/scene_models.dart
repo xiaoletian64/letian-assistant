@@ -53,8 +53,10 @@ class QuotaWindow {
     this.value, {
     this.remaining,
     this.reset = '重置时间未提供',
+    this.summary,
   });
   final String period, value, reset;
+  final String? summary;
   final double? remaining;
 }
 
@@ -74,6 +76,28 @@ class QuotaAccount {
   bool get stale =>
       sourceDate == null ||
       DateTime.now().toUtc().difference(sourceDate!).inMinutes > 90;
+  bool get invalidTime =>
+      sourceDate != null &&
+      sourceDate!.isAfter(
+        DateTime.now().toUtc().add(const Duration(minutes: 5)),
+      );
+  bool get unavailable => error.isNotEmpty || stale || invalidTime;
+  bool get balanceOnly =>
+      windows.isNotEmpty && windows.every((w) => w.period == '账户余额');
+  bool get low =>
+      !unavailable &&
+      windows.any((w) => w.remaining != null && w.remaining! <= 15);
+  String get status => error.isNotEmpty
+      ? '查询失败'
+      : invalidTime
+      ? '来源时间异常'
+      : sourceDate == null
+      ? '来源时间未提供'
+      : stale
+      ? '数据已过期'
+      : low
+      ? '剩余较少'
+      : '数据正常';
 }
 
 List<QuotaAccount> quotaAccounts(Map raw) {
@@ -92,6 +116,31 @@ List<QuotaAccount> quotaAccounts(Map raw) {
     'jev': 'JEV',
     'gha': 'GitHub Actions',
   };
+  bool hasError(dynamic value) => value != null && '$value'.isNotEmpty;
+  String errorText(dynamic value) {
+    if (!hasError(value)) return '';
+    return RegExp(
+          r'401|reauth|refresh_credential|authentication',
+          caseSensitive: false,
+        ).hasMatch('$value')
+        ? '账号认证需恢复，当前额度未知'
+        : '本次查询失败，当前额度未知';
+  }
+
+  String accountName(String provider, dynamic value, int index) {
+    final rawName = '${value ?? '账号 ${index + 1}'}';
+    if (provider == 'codex') {
+      final match = RegExp(
+        r'^Codex-([^()]+)(?:\([^)]*\))?$',
+      ).firstMatch(rawName);
+      if (match != null) return '${match[1]} 账户';
+    }
+    if (provider == 'mimo' && rawName.startsWith('MiMo-standard:year-')) {
+      return '标准套餐（年付）';
+    }
+    return rawName;
+  }
+
   String period(Map w, String fallback) {
     final seconds = sceneNumber(w['window_seconds']);
     if (seconds == null) return fallback;
@@ -151,12 +200,18 @@ List<QuotaAccount> quotaAccounts(Map raw) {
     final totalText = limit == null ? '总量未提供' : '总量 ${amount(limit)}';
     final usedText = used == null ? '已用未提供' : '已用 ${amount(used)}';
     final leftText = left == null ? '剩余额度未提供' : '剩余 ${amount(left)} credits';
+    final summary = left == null
+        ? '剩余额度未提供'
+        : left >= 100000000
+        ? '剩余约 ${(left / 100000000).toStringAsFixed(2)} 亿 credits'
+        : '剩余 ${amount(left)} credits';
     return QuotaWindow(
       q['name'] == 'month_total_token'
-          ? '每月 Token 额度'
+          ? '每月 credits 额度'
           : '${q['name'] ?? 'Token Plan'}',
       '$totalText · $usedText · $leftText${percent == null ? '' : '（${quotaPercent(percent)}%）'}',
       remaining: percent,
+      summary: summary,
       reset: q['reset_at'] == null
           ? '重置时间未提供'
           : '${sceneTime(q['reset_at'])} 重置（北京时间）',
@@ -169,7 +224,9 @@ List<QuotaAccount> quotaAccounts(Map raw) {
     final symbol = {'CNY': '¥', 'USD': r'$'}[currency] ?? currency;
     return QuotaWindow(
       '账户余额',
-      amount == null ? '余额待更新' : '余额 $symbol${sceneDecimal(amount)}',
+      amount == null
+          ? '余额待更新'
+          : '余额 $symbol${amount == amount.truncateToDouble() ? amount.toStringAsFixed(0) : '$amount'}',
       reset: '金额余额 · 不与订阅额度合计',
     );
   }
@@ -251,13 +308,23 @@ List<QuotaAccount> quotaAccounts(Map raw) {
         windows,
         sourceTime: ts,
         source: '直接采集',
-        error: windows.isEmpty ? '该来源暂未提供可展示的额度字段' : '',
+        error: hasError(a['error'])
+            ? errorText(a['error'])
+            : windows.isEmpty
+            ? '该来源暂未提供可展示的额度字段'
+            : '',
       ),
     );
   }
   for (final e in push.entries) {
     final group = sceneMap(e.value);
     if (e.key == 'gha') {
+      final scopedErrors = sceneMap(group['account_errors']);
+      final hasScopedErrors = ['personal', 'org'].any(
+        (scope) =>
+            hasError(sceneMap(group[scope])['error']) ||
+            hasError(scopedErrors[scope]),
+      );
       for (final scope in ['personal', 'org']) {
         final a = sceneMap(group[scope]);
         if (a.isEmpty) continue;
@@ -284,6 +351,14 @@ List<QuotaAccount> quotaAccounts(Map raw) {
               ),
             ],
             sourceTime: group['updated'],
+            source: '推送采集',
+            error: errorText(
+              a['error'] ??
+                  scopedErrors[scope] ??
+                  (hasScopedErrors
+                      ? null
+                      : group['lastError'] ?? group['error']),
+            ),
           ),
         );
       }
@@ -304,7 +379,15 @@ List<QuotaAccount> quotaAccounts(Map raw) {
     }
     for (var i = 0; i < list.length; i++) {
       final a = list[i];
-      final ts = a['ts'] ?? group['updated_at'];
+      final ts = a['ts'] ?? group['observedAt'] ?? group['updated_at'];
+      final accountErrors = sceneMap(group['account_errors']);
+      final ownError = a['error'] ?? accountErrors[a['n']];
+      final scopedErrors = list.any(
+        (row) => hasError(row['error']) || hasError(accountErrors[row['n']]),
+      );
+      final failure = hasError(ownError)
+          ? ownError
+          : (scopedErrors ? null : group['lastError'] ?? group['error']);
       final windows = <QuotaWindow>[];
       if (e.key == 'mimo' && a['quota'] is Map) {
         windows.add(
@@ -365,7 +448,7 @@ List<QuotaAccount> quotaAccounts(Map raw) {
         windows.add(
           QuotaWindow(
             e.key == 'mimo' && '${a['n']}'.endsWith('-month_total_token')
-                ? '每月 Token 额度'
+                ? '每月 credits 额度'
                 : '周期以来源为准',
             remain != null && e.key != 'mimo'
                 ? '剩余 ${sceneDecimal(remain)}%'
@@ -379,12 +462,11 @@ List<QuotaAccount> quotaAccounts(Map raw) {
       result.add(
         QuotaAccount(
           names[e.key] ?? e.key,
-          e.key == 'mimo' && '${a['n']}'.startsWith('MiMo-standard:year-')
-              ? '标准套餐（年付）'
-              : '${a['n'] ?? '账号 ${i + 1}'}',
+          accountName(e.key, a['n'], i),
           windows,
           sourceTime: ts,
           source: '推送采集',
+          error: errorText(failure),
         ),
       );
     }
@@ -403,7 +485,9 @@ List<QuotaAccount> quotaAccounts(Map raw) {
   }
   for (final e in sceneMap(raw['errors']).entries) {
     final name = names[e.key] ?? e.key;
-    final matches = result.where((a) => a.platform == name).toList();
+    final matches = result
+        .where((a) => a.platform == name && a.source == '直接采集')
+        .toList();
     if (matches.isEmpty) {
       result.add(QuotaAccount(name, '平台账号', const [], error: '本次查询失败，额度未知'));
     } else {
@@ -415,6 +499,7 @@ List<QuotaAccount> quotaAccounts(Map raw) {
           a.windows,
           sourceTime: a.sourceDate?.toIso8601String(),
           error: '本次查询失败，显示上次观测',
+          source: a.source,
         );
       }
     }

@@ -40,6 +40,7 @@ internal class MonitorPolicy {
         const val MAX_RESPONSE_BYTES = 256 * 1024
         fun categoryEnabled(type: String, settings: Map<String, Boolean>): Boolean {
             val category = when {
+                type == "daily_digest" -> "daily"
                 type.startsWith("quota_") -> "quota"
                 type.startsWith("balance_") -> "balance"
                 type.startsWith("server_") || type.startsWith("monitor_") -> "server"

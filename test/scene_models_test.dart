@@ -48,7 +48,7 @@ void main() {
       },
     }).first;
     expect(a.name, '标准套餐（年付）');
-    expect(a.windows.single.period, '每月 Token 额度');
+    expect(a.windows.single.period, '每月 credits 额度');
     expect(a.windows.single.value, contains('已用 40,167,631,752'));
     expect(a.windows.single.remaining, 69.57);
     expect(a.windows.single.reset, '重置时间未提供');

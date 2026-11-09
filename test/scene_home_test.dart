@@ -47,6 +47,7 @@ void main() {
             return response(catalog);
           case '/api/quota/summary':
             return response({
+              'collected_at': DateTime.now().toUtc().toIso8601String(),
               'accounts': {
                 'opencode': {
                   'rolling': {'percent': 0},
@@ -56,6 +57,7 @@ void main() {
               },
               'push': {
                 'codex': {
+                  'updated_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
                   'accounts': [
                     {
                       'n': '主账号',
@@ -95,6 +97,14 @@ void main() {
       await t.pumpAndSettle();
       expect(find.text('充电中'), findsWidgets);
       expect(find.textContaining('平台剩余 3 天'), findsWidgets);
+      expect(find.text('主账号'), findsNothing);
+      expect(find.text('备用账号'), findsNothing);
+      for (final platform in ['OpenCode', 'Codex']) {
+        final tile = find.byKey(ValueKey('quota-platform-$platform'));
+        await t.ensureVisible(tile);
+        await t.tap(tile);
+        await t.pumpAndSettle();
+      }
       expect(find.text('主账号'), findsOneWidget);
       expect(find.text('备用账号'), findsOneWidget);
       expect(find.text('每月窗口'), findsOneWidget);

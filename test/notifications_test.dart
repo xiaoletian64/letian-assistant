@@ -74,6 +74,38 @@ void main() {
     await t.scrollUntilVisible(find.text('余额提醒'), 300);
     expect(find.text('余额提醒'), findsOneWidget);
   });
+  widgetTest('daily report body is readable at large text scale', (t) async {
+    final report = Map<String, dynamic>.from(snapshot);
+    report['items'] = [
+      {
+        'id': 'daily',
+        'title': '乐天早报',
+        'body': '昨日消费总额未知\n114：未获取官方昨日账单',
+        'type': 'daily_digest',
+        'read': false,
+      },
+    ];
+    app.apiClient = MockClient((r) async => reply(report));
+    await t.pumpWidget(
+      MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: const TextScaler.linear(1.5)),
+          child: child!,
+        ),
+        home: const NotificationsPage(),
+      ),
+    );
+    await t.pumpAndSettle();
+    await t.scrollUntilVisible(find.text('乐天早报'), 300);
+    expect(find.byType(SelectableText), findsNothing);
+    await t.tap(find.text('乐天早报'));
+    await t.pumpAndSettle();
+    expect(find.byType(SelectableText), findsOneWidget);
+    expect(find.textContaining('114：未获取'), findsOneWidget);
+    expect(t.takeException(), isNull);
+  });
   widgetTest('read failure does not mark read', (t) async {
     app.apiClient = MockClient(
       (r) async => r.method == 'GET' ? reply(snapshot) : reply({}, 503),
@@ -176,6 +208,7 @@ void main() {
     await t.tap(find.byTooltip('刷新'));
     await t.pumpAndSettle();
     expect(find.textContaining('当前账号无权访问'), findsOneWidget);
+    await t.scrollUntilVisible(find.textContaining('0条未读'), 200);
     expect(find.textContaining('0条未读'), findsOneWidget);
   });
   widgetTest('token rotation reuses random installation id', (t) async {

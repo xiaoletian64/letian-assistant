@@ -171,77 +171,11 @@ class _PluginPageState extends State<PluginPage> {
                       '${data?['empty_body'] ?? '下拉刷新，稍后再来看看。'}',
                     ),
                   for (final item in items.whereType<Map>())
-                    Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      clipBehavior: Clip.antiAlias,
-                      child: InkWell(
-                        onTap: itemCanOpen(item)
-                            ? () => openPluginItem(context, item)
-                            : null,
-                        child: Padding(
-                          padding: const EdgeInsets.all(18),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${item['title'] ?? ''}',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w700,
-                                  height: 1.4,
-                                ),
-                              ),
-                              if ('${item['subtitle'] ?? ''}'.isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 8),
-                                  child: Text(
-                                    '${item['subtitle']}',
-                                    style: const TextStyle(
-                                      color: Color(0xFF2563EB),
-                                      fontWeight: FontWeight.w600,
-                                      height: 1.5,
-                                    ),
-                                  ),
-                                ),
-                              if ('${item['body'] ?? ''}'.isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 10),
-                                  child: SelectableText(
-                                    '${item['body']}',
-                                    style: const TextStyle(
-                                      height: 1.65,
-                                      color: Color(0xFF334155),
-                                    ),
-                                  ),
-                                ),
-                              if (itemCanOpen(item))
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 12),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        item['file'] != null
-                                            ? Icons.file_download_outlined
-                                            : Icons.open_in_new,
-                                        size: 18,
-                                        color: const Color(0xFF2563EB),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        item['file'] != null
-                                            ? '下载并打开文件'
-                                            : '打开原文',
-                                        style: const TextStyle(
-                                          color: Color(0xFF2563EB),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
+                    CollapsibleContentCard(
+                      item: item,
+                      onOpen: itemCanOpen(item)
+                          ? () => openPluginItem(context, item)
+                          : null,
                     ),
                   if (footnote.isNotEmpty)
                     Padding(
@@ -614,4 +548,120 @@ class _SessionDetailPageState extends State<SessionDetailPage> {
             ),
     );
   }
+}
+
+/// Keep details out of the initial reading path; opening a link is explicit.
+class CollapsibleContentCard extends StatelessWidget {
+  const CollapsibleContentCard({super.key, required this.item, this.onOpen});
+  final Map item;
+  final VoidCallback? onOpen;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    margin: const EdgeInsets.only(bottom: 12),
+    clipBehavior: Clip.antiAlias,
+    child: ExpansionTile(
+      initiallyExpanded: false,
+      maintainState: false,
+      title: Text('${item['title'] ?? ''}'),
+      subtitle: '${item['subtitle'] ?? ''}'.isEmpty
+          ? null
+          : Text(
+              '${item['subtitle']}',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+      childrenPadding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+      expandedCrossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (item['type'] == 'order' && item['products'] is List)
+          orderProductImages(item['products'] as List),
+        if ('${item['subtitle'] ?? ''}'.isNotEmpty)
+          Text('${item['subtitle']}', style: const TextStyle(height: 1.5)),
+        if ('${item['body'] ?? ''}'.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: SelectableText(
+              '${item['body']}',
+              style: const TextStyle(height: 1.65),
+            ),
+          ),
+        if (onOpen != null)
+          TextButton.icon(
+            onPressed: onOpen,
+            icon: Icon(
+              item['file'] != null
+                  ? Icons.file_download_outlined
+                  : Icons.open_in_new,
+            ),
+            label: Text(item['file'] != null ? '下载并打开文件' : '打开原文'),
+          ),
+      ],
+    ),
+  );
+}
+
+// Compatible extension of the existing plugin item protocol.
+Widget orderProductImages(List products) {
+  final entries = products.whereType<Map>().toList();
+  if (entries.isEmpty) return const SizedBox.shrink();
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final product in entries)
+          Semantics(
+            label: '${product['title'] ?? '商品'}的图片',
+            child: SizedBox(
+              width: 80,
+              height: 80,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: safeOrderImage(product['image_url']),
+              ),
+            ),
+          ),
+      ],
+    ),
+  );
+}
+
+Widget safeOrderImage(dynamic source) {
+  const domains = [
+    'alicdn.com',
+    '360buyimg.com',
+    'jd.com',
+    'pddpic.com',
+    'yangkeduo.com',
+    'meituan.net',
+    'dpfile.com',
+  ];
+  final uri = source is String ? Uri.tryParse(source) : null;
+  Widget fallback() => const ColoredBox(
+    color: Color(0xFFF1F5F9),
+    child: Center(
+      child: Text(
+        '暂无商品图',
+        textAlign: TextAlign.center,
+        style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+      ),
+    ),
+  );
+  if (uri == null ||
+      uri.scheme != 'https' ||
+      uri.userInfo.isNotEmpty ||
+      (uri.hasPort && uri.port != 443) ||
+      !domains.any((d) => uri.host == d || uri.host.endsWith('.$d'))) {
+    return fallback();
+  }
+  return Image.network(
+    uri.toString(),
+    fit: BoxFit.cover,
+    excludeFromSemantics: true,
+    errorBuilder: (_, __, ___) => fallback(),
+    loadingBuilder: (_, child, progress) =>
+        progress == null ? child : fallback(),
+  );
 }

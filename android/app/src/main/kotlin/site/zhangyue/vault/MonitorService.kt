@@ -171,7 +171,7 @@ class MonitorService : Service() {
             val items = payload.getJSONArray("items")
             require(items.length() <= 1000)
             val settingsObject = payload.getJSONObject("settings")
-            val settings = listOf("quota", "balance", "server", "reset", "recovery").associateWith { settingsObject.opt(it) == true }
+            val settings = listOf("daily", "quota", "balance", "server", "reset", "recovery").associateWith { settingsObject.opt(it) == true }
             val events = (0 until items.length()).mapNotNull { index ->
                 val item = items.optJSONObject(index) ?: return@mapNotNull null
                 val id = item.opt("id") as? String ?: return@mapNotNull null

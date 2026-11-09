@@ -20,3 +20,10 @@ The home page exposes the existing authorized server dashboard. MiMo uses readab
 Validation: source commit `8b700ed29ada682aa2526e1ae2610b4693f78c80`, GitHub Actions run `41411512940` passed verification and both platform builds. Android QA verified upgrade from44, background ordinary notification, notification navigation, stop and logout cleanup. iOS signed entitlement and Apple internal availability were checked; physical-device push receipt requires installation and user notification permission.
 
 Generic public CI artifacts contain placeholder endpoints and no private signing assets, server deployment credentials or APNs keys. Production signing and endpoint injection happen outside this repository.
+
+
+# 2.13.0 (47) integrated candidate
+
+Combines the daily digest inbox and switch, Android daily notification filtering, order product images with safe placeholders, and default collapsed quota platform/content cards. Reports expand without marking read; the read action remains explicit. Missing payment, refund, logistics and bill data remain unknown. Preserves the existing owner isolation, cached source freshness, notification permission and foreground monitoring behavior.
+
+Local validation: 153 shared Flutter tests plus the integrated preview test, 14 Android release JVM tests, Dart analysis, Python tests and source export scan passed. Both Android release and unsigned iOS device builds succeeded locally with Xcode 27.2. Production configuration and signing were performed privately on the existing server. Signed candidates are distinct from public placeholder artifacts. No claim of TestFlight upload, update-feed publication, real-device installation or notification receipt is made by these build checks.

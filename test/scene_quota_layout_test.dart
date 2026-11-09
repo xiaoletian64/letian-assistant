@@ -7,7 +7,7 @@ void main() {
     'Cursor and personal organization GitHub rows keep full readings at phone and large text sizes',
     (t) async {
       final accounts = quotaAccounts({
-        'collected_at': '2026-10-26T12:00:00+08:00',
+        'collected_at': DateTime.now().toUtc().toIso8601String(),
         'accounts': {
           'cursor': {
             'total_percent': 26.5,
@@ -18,6 +18,7 @@ void main() {
         },
         'push': {
           'gha': {
+            'updated': DateTime.now().millisecondsSinceEpoch ~/ 1000,
             'personal': {'included': 2000, 'left': 32},
             'org': {'included': 50000, 'left': 49123.5},
             'note': '每月1日重置；以GitHub账单周期为准，组织与个人独立计量',
