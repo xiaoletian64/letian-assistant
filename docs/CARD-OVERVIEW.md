@@ -25,3 +25,9 @@ inbox directly. Monitoring remains an explicit user action with a visible stop
 control. Android foreground monitoring and iOS APNs require separate acceptance.
 The update checker's version must match the packaged pubspec version to avoid
 repeatedly offering the currently installed release.
+
+Collapsed quota summaries prioritize available values (low quota first), keeping
+up to two account/window values visible. Unavailable sources remain in the
+attention count with an explicit unknown-value count, and keep their individual
+failure details when expanded. Failed sources cannot crowd all confirmed
+remaining values out of the collapsed summary.

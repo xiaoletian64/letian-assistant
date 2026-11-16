@@ -20,6 +20,24 @@ void main() {
     expect(summary, contains('Codex · 备用账号 · 5小时窗口 · 剩余 80%'));
     expect(summary, isNot(contains('92%')));
   });
+  test(
+    'failed sources cannot hide all known remaining values when collapsed',
+    () {
+      final summary = quotaOverview([
+        QuotaAccount('来源甲', '账户', [], sourceTime: now, error: '查询失败'),
+        QuotaAccount('来源乙', '账户', [], sourceTime: now, error: '查询失败'),
+        QuotaAccount('Codex', '主账号', [
+          const QuotaWindow('7天窗口', '剩余 12%', remaining: 12),
+        ], sourceTime: now),
+        QuotaAccount('GLM', '主账号', [
+          const QuotaWindow('5小时窗口', '剩余 80%', remaining: 80),
+        ], sourceTime: now),
+      ]).join('\n');
+      expect(summary, contains('Codex · 7天窗口 · 剩余 12%'));
+      expect(summary, contains('GLM · 5小时窗口 · 剩余 80%'));
+      expect(summary, contains('2 个来源当前数值未知'));
+    },
+  );
   test('unavailable values never leak into current summary', () {
     final a = QuotaAccount(
       'GLM',

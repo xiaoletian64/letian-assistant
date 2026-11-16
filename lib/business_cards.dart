@@ -11,11 +11,14 @@ List<String> quotaOverview(List<QuotaAccount> accounts) {
       )
       .toList();
   sources.sort((a, b) {
+    // Keep confirmed values visible even when several other sources fail.
     int rank(QuotaAccount a) => a.unavailable
-        ? 0
+        ? 3
+        : a.windows.isEmpty
+        ? 2
         : a.low
-        ? 1
-        : 2;
+        ? 0
+        : 1;
     return rank(a).compareTo(rank(b));
   });
   final lines = <String>[];
@@ -41,8 +44,10 @@ List<String> quotaOverview(List<QuotaAccount> accounts) {
   if (lines.isEmpty) lines.add('暂未取得额度数据');
   final platforms = sources.map((a) => a.platform).toSet().length;
   final attention = sources.where((a) => a.unavailable || a.low).length;
+  final unavailable = sources.where((a) => a.unavailable).length;
   lines.add(
-    '$platforms 个平台${attention > 0 ? ' · $attention 个来源需关注' : ' · 未发现额度告警'}',
+    '$platforms 个平台${attention > 0 ? ' · $attention 个来源需关注' : ' · 未发现额度告警'}'
+    '${unavailable > 0 ? ' · $unavailable 个来源当前数值未知' : ''}',
   );
   final times = sources.map((a) => a.sourceDate).whereType<DateTime>().toList()
     ..sort();
