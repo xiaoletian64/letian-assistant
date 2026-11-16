@@ -48,7 +48,7 @@ def invoke_rpc(params):
 def handle(handler, connection, rpc=invoke_rpc):
     user,_=handler._auth(connection)
     if user is None:return handler._json(401,{'error':'authentication_required'})
-    if user['user_id']!=1:return handler._json(403,{'error':'forbidden'})
+    if type(user['user_id']) is not int or user['user_id']!=1:return handler._json(403,{'error':'forbidden'})
     try:params=parse_query(urllib.parse.urlsplit(handler.path).query)
     except (ValueError,TypeError):return handler._json(400,{'error':'invalid_history_query'})
     try:return handler._json(200,rpc(params))

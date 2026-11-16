@@ -125,7 +125,7 @@ def handle_status(handler, connection, monitor=None):
     user, _ = handler._auth(connection)
     if user is None:
         return handler._json(401, {'error':'authentication_required'})
-    if user['user_id'] != 1:
+    if type(user['user_id']) is not int or user['user_id'] != 1:
         return handler._json(403, {'error':'forbidden'})
     try:
         if monitor is None:

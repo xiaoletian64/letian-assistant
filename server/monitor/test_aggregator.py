@@ -58,5 +58,5 @@ class AuthorizationTests(unittest.TestCase):
             def _json(self, code, body): return code, body
         class Monitor:
             def snapshot(self): return {'servers': []}
-        for user, code in ((None,401), ({'user_id':5},403), ({'user_id':1},200)):
+        for user, code in ((None,401), ({'user_id':5},403), ({'user_id':True},403), ({'user_id':1.0},403), ({'user_id':'1'},403), ({'user_id':1},200)):
             self.assertEqual(handle_status(Handler(user), None, Monitor())[0],code)

@@ -14,7 +14,7 @@ class ProxyTests(unittest.TestCase):
    def __init__(self,user,path):self.user=user;self.path=path
    def _auth(self,c):return self.user,None
    def _json(self,status,body):return status,body
-  for user,path,status in [(None,'/api/hub/quota/history',401),({'user_id':5},'/api/hub/quota/history',403),({'user_id':1},'/api/hub/quota/history?limit=1&limit=2',400),({'user_id':1},'/api/hub/quota/history?limit=1',200)]:
+  for user,path,status in [(None,'/api/hub/quota/history',401),({'user_id':5},'/api/hub/quota/history',403),({'user_id':True},'/api/hub/quota/history',403),({'user_id':1.0},'/api/hub/quota/history',403),({'user_id':'1'},'/api/hub/quota/history',403),({'user_id':1},'/api/hub/quota/history?limit=1&limit=2',400),({'user_id':1},'/api/hub/quota/history?limit=1',200)]:
    self.assertEqual(handle(H(user,path),None,rpc)[0],status)
   self.assertEqual(calls,[{'limit':1}])
  def test_backend_details_are_not_exposed(self):
