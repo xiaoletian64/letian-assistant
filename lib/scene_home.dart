@@ -101,6 +101,8 @@ class _SceneShellState extends State<SceneShell> with WidgetsBindingObserver {
     }
     session = captured;
     setState(() {
+      // A new generation invalidates pending indicators from older requests.
+      pending.clear();
       refreshing = true;
       identityError = '';
       directoryError = '';
@@ -139,9 +141,14 @@ class _SceneShellState extends State<SceneShell> with WidgetsBindingObserver {
       });
       unawaited(syncNotificationBinding().catchError((_) {}));
       unawaited(openPendingNotification(captured, version));
+      // QR/platform authorization is needed only on the account page. It must
+      // never keep the home refresh locked while waiting on external platforms.
+      if (tab == 3 && allowed('auth')) {
+        unawaited(load('auth', paths['auth']!, captured, version));
+      }
       await Future.wait(
         paths.entries
-            .where((p) => allowed(p.key))
+            .where((p) => p.key != 'auth' && allowed(p.key))
             .map((p) => load(p.key, p.value, captured, version)),
       );
     } on SessionExpired {
@@ -190,7 +197,7 @@ class _SceneShellState extends State<SceneShell> with WidgetsBindingObserver {
     String captured,
     int version,
   ) async {
-    if (!await current(captured, version)) return;
+    if (!await current(captured, version) || pending.contains(id)) return;
     setState(() {
       pending.add(id);
       errors.remove(id);
@@ -229,10 +236,14 @@ class _SceneShellState extends State<SceneShell> with WidgetsBindingObserver {
     }
   }
 
-  void changeTab(int next) => setState(() {
-    tab = next;
-    visited.add(next);
-  });
+  void changeTab(int next) {
+    setState(() {
+      tab = next;
+      visited.add(next);
+    });
+    if (next == 3) unawaited(retryCard('auth'));
+  }
+
   Future<void> openPendingNotification(String captured, int version) async {
     try {
       final event = await consumeNotificationOpenEvent();

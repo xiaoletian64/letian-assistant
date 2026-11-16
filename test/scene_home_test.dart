@@ -255,6 +255,72 @@ void main() {
       expect(quotaRequests, 1);
     },
   );
+  testWidgets(
+    'slow platform authorization cannot block repeated home refresh',
+    (t) async {
+      final slowAuth = Completer<http.Response>();
+      var quotaRequests = 0, authRequests = 0;
+      addTearDown(() {
+        if (!slowAuth.isCompleted) slowAuth.complete(response({}));
+      });
+      apiClient = MockClient((r) async {
+        switch (r.url.path) {
+          case '/api/me':
+            return response({'username': 'alice'});
+          case '/api/hub/plugins':
+            return response(catalog);
+          case '/api/quota/summary':
+            quotaRequests++;
+            return response({'accounts': {}});
+          case '/api/hub/vehicles':
+            return response({'vehicles': []});
+          case '/api/hub/sessions':
+            return response({'sessions': []});
+          case '/api/hub/plugins/open':
+            return response({'items': []});
+          case '/api/qr/all':
+            authRequests++;
+            return authRequests == 1
+                ? slowAuth.future
+                : response({
+                    'douyin': {'logged_in': true},
+                  });
+          default:
+            return response({});
+        }
+      });
+      await t.pumpWidget(const MaterialApp(home: SceneShell()));
+      await t.pump(const Duration(milliseconds: 200));
+      await t.pump(const Duration(milliseconds: 200));
+      expect(quotaRequests, 1);
+      await t
+          .widget<RefreshIndicator>(find.byType(RefreshIndicator).first)
+          .onRefresh();
+      await t.pump(const Duration(seconds: 2));
+      await t.pump();
+      expect(quotaRequests, 2);
+      await t.tap(find.text('我的').last);
+      await t.pump(const Duration(milliseconds: 200));
+      expect(authRequests, 1);
+      await t.tap(find.text('首页').last);
+      await t.pump();
+      await t
+          .widget<RefreshIndicator>(find.byType(RefreshIndicator).first)
+          .onRefresh();
+      await t.pumpAndSettle();
+      expect(quotaRequests, 3);
+      await t.tap(find.text('我的').last);
+      await t.pumpAndSettle();
+      expect(authRequests, 2);
+      slowAuth.complete(
+        response({
+          'douyin': {'logged_in': false},
+        }),
+      );
+      await t.pumpAndSettle();
+      expect(find.text('已连接'), findsOneWidget);
+    },
+  );
   testWidgets('no permission means no protected business requests', (t) async {
     final paths = <String>[];
     apiClient = MockClient((r) async {

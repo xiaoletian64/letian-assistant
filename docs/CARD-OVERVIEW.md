@@ -39,3 +39,12 @@ flags while retaining strict package, higher-version and current-signer checks.
 An already-installed older client with this parsing defect needs a same-signer
 manual covering upgrade to the bridge release; do not uninstall it or describe
 that covering install as an in-app OTA success.
+
+## Refresh isolation
+
+Home refresh awaits identity, the authorized catalog and visible business data.
+External QR/platform authorization checks load on the account page and do not
+hold the home refresh lock. Entering the account page still checks its current
+state. A new refresh generation clears obsolete pending indicators; late prior
+responses cannot overwrite newer results or a different account. Retrying home
+while an authorization source is slow must issue fresh business requests.
