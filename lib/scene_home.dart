@@ -21,6 +21,13 @@ class _SceneShellState extends State<SceneShell> with WidgetsBindingObserver {
   final Map<String, Map<String, dynamic>> values = {};
   final Map<String, String> errors = {};
   final Set<String> pending = {};
+  static const paths = {
+    'quota': '/api/quota/summary',
+    'vehicles': '/api/hub/vehicles',
+    'sessions': '/api/hub/sessions',
+    'auth': '/api/qr/all',
+    'purchases': '/api/hub/plugins/open?id=purchases',
+  };
   final scroll = ScrollController();
   final vehicleKey = GlobalKey(), quotaKey = GlobalKey();
   String filter = '全部';
@@ -132,13 +139,6 @@ class _SceneShellState extends State<SceneShell> with WidgetsBindingObserver {
       });
       unawaited(syncNotificationBinding().catchError((_) {}));
       unawaited(openPendingNotification(captured, version));
-      const paths = {
-        'quota': '/api/quota/summary',
-        'vehicles': '/api/hub/vehicles',
-        'sessions': '/api/hub/sessions',
-        'auth': '/api/qr/all',
-        'purchases': '/api/hub/plugins/open?id=purchases',
-      };
       await Future.wait(
         paths.entries
             .where((p) => allowed(p.key))
@@ -217,13 +217,11 @@ class _SceneShellState extends State<SceneShell> with WidgetsBindingObserver {
       if (await current(captured, version) && allowed(id)) {
         setState(() {
           if (e is AccessDenied) {
-            values.clear();
-            directory.clear();
-            visited.remove(2);
-            directoryError = friendlyError(e);
-          } else {
-            errors[id] = friendlyError(e);
+            // A feature denial revokes only that feature's cached content.
+            // The authenticated catalog still governs the other cards.
+            values.remove(id);
           }
+          errors[id] = friendlyError(e);
         });
       }
     } finally {
@@ -261,11 +259,18 @@ class _SceneShellState extends State<SceneShell> with WidgetsBindingObserver {
     if (mounted) refresh();
   }
 
+  Future<void> retryCard(String id) async {
+    final captured = session;
+    if (captured == null || !allowed(id) || pending.contains(id)) return;
+    final path = paths[id];
+    if (path != null) await load(id, path, captured, generation);
+  }
+
   Widget status(String id) {
     if (errors[id] != null) {
       return inlineMessage(
         '${values[id] == null ? '' : '显示上次数据 · '}${errors[id]}',
-        refresh,
+        () => retryCard(id),
       );
     }
     if (pending.contains(id)) {
@@ -411,6 +416,19 @@ class _SceneShellState extends State<SceneShell> with WidgetsBindingObserver {
                                 ],
                               ),
                             ],
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: '通知与提醒',
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const NotificationsPage(),
+                            ),
+                          ),
+                          icon: const Icon(
+                            Icons.notifications_outlined,
+                            color: sceneInk,
                           ),
                         ),
                         IconButton(

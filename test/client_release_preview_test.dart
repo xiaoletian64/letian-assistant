@@ -6,6 +6,14 @@ import 'package:vault/main.dart';
 import 'package:vault/notifications.dart';
 
 void main() {
+  test('update checker uses the actual packaged release version', () {
+    final version = RegExp(
+      r'^version: ([^+\s]+)\+(\d+)$',
+      multiLine: true,
+    ).firstMatch(File('pubspec.yaml').readAsStringSync())!;
+    expect(currentVersion, version.group(1));
+    expect(currentVersionCode, int.parse(version.group(2)!));
+  });
   testWidgets('integrated cards start collapsed and reports remain readable', (
     t,
   ) async {

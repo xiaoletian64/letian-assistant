@@ -214,6 +214,47 @@ void main() {
     expect(find.textContaining('private-vehicle'), findsNothing);
     expect(await token(), 'alice');
   });
+  testWidgets(
+    'one forbidden card preserves unrelated cards and retry is isolated',
+    (t) async {
+      var quotaRequests = 0;
+      var denied = true;
+      apiClient = MockClient((r) async {
+        switch (r.url.path) {
+          case '/api/me':
+            return response({'username': 'alice'});
+          case '/api/hub/plugins':
+            return response(catalog);
+          case '/api/quota/summary':
+            quotaRequests++;
+            return response({'accounts': {}});
+          case '/api/hub/vehicles':
+            return denied
+                ? response({}, 403)
+                : response({
+                    'vehicles': [
+                      {'name': '通勤车'},
+                    ],
+                  });
+          case '/api/hub/sessions':
+            return response({'sessions': []});
+          case '/api/hub/plugins/open':
+            return response({'items': []});
+          default:
+            return response({});
+        }
+      });
+      await t.pumpWidget(const MaterialApp(home: SceneShell()));
+      await t.pumpAndSettle();
+      expect(find.text('AI额度'), findsOneWidget);
+      expect(find.textContaining('当前账号无权访问'), findsOneWidget);
+      denied = false;
+      await t.tap(find.widgetWithText(TextButton, '重试').first);
+      await t.pumpAndSettle();
+      expect(find.textContaining('通勤车'), findsWidgets);
+      expect(quotaRequests, 1);
+    },
+  );
   testWidgets('no permission means no protected business requests', (t) async {
     final paths = <String>[];
     apiClient = MockClient((r) async {

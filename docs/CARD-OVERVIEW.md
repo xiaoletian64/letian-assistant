@@ -11,3 +11,17 @@
 首次进入收起；同一身份的数据刷新保留展开状态；身份切换重建卡片，旧身份响应不会覆盖新身份数据。请求进行中与失败状态保持可见。使用平台ExpansionTile提供按钮、键盘焦点和展开语义，maintainState=false确保收起的明细不参与导航。使用现有Flutter动效及系统减少动画设置。
 
 验证覆盖：多账号不加总；异常旧读数隐藏；消费摘要缺失时为未知；三业务组首次折叠；收起仍看得见金额/周期/状态；刷新保留展开；再次收起隐藏详情；320宽及两倍字号无溢出；首页按授权目录请求消费数据；完整回归及合成截图。Android/iOS实际发布验证另由统一发布记录提供，不能将widget通过当作真机验收。
+
+## Card recovery and notification access
+
+A feature-level 403 clears only that feature's cached data and keeps its error
+and retry visible. Other catalog-authorized cards remain available. Retrying a
+card requests only its endpoint; a catalog-level denial still clears protected
+content, and 401 still signs out. Account switches continue to invalidate late
+responses. Missing values remain unknown and summaries stay collapsed.
+
+The home header opens notification permissions, monitoring and the existing
+inbox directly. Monitoring remains an explicit user action with a visible stop
+control. Android foreground monitoring and iOS APNs require separate acceptance.
+The update checker's version must match the packaged pubspec version to avoid
+repeatedly offering the currently installed release.
