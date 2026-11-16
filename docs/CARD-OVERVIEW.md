@@ -31,3 +31,11 @@ up to two account/window values visible. Unavailable sources remain in the
 attention count with an explicit unknown-value count, and keep their individual
 failure details when expanded. Failed sources cannot crowd all confirmed
 remaining values out of the collapsed summary.
+
+
+Android 9 update compatibility: archive parsing requires both
+GET_SIGNING_CERTIFICATES and GET_SIGNATURES to populate signingInfo. Use both
+flags while retaining strict package, higher-version and current-signer checks.
+An already-installed older client with this parsing defect needs a same-signer
+manual covering upgrade to the bridge release; do not uninstall it or describe
+that covering install as an in-app OTA success.

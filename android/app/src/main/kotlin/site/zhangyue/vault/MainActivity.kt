@@ -414,7 +414,9 @@ class MainActivity : FlutterActivity() {
 
     @Suppress("DEPRECATION")
     private fun validateUpdateArchive(file: File) {
-        val flags = if (Build.VERSION.SDK_INT >= 28) PackageManager.GET_SIGNING_CERTIFICATES else PackageManager.GET_SIGNATURES
+        // Android 9 archive parsing needs both flags to populate signingInfo.
+        // Keep comparing current signers; never accept an empty signer set.
+        val flags = if (Build.VERSION.SDK_INT >= 28) PackageManager.GET_SIGNING_CERTIFICATES or PackageManager.GET_SIGNATURES else PackageManager.GET_SIGNATURES
         val archive = requireNotNull(packageManager.getPackageArchiveInfo(file.absolutePath, flags)) { "无法验证安装包" }
         val installed = packageManager.getPackageInfo(packageName, flags)
         val nextVersion = if (Build.VERSION.SDK_INT >= 28) archive.longVersionCode else archive.versionCode.toLong()
