@@ -109,23 +109,173 @@ class BusinessSummaryCard extends StatelessWidget {
   );
 }
 
-List<Widget> quotaOverviewRows(List<QuotaAccount> accounts) => [
-  for (final a in accounts)
-    ListTile(
-      contentPadding: EdgeInsets.zero,
-      title: Text('${a.platform} · ${a.name}'),
-      subtitle: Text(
-        [
-          if (a.source.isNotEmpty) '来源：${a.source}',
-          if (a.unavailable)
-            '${a.status} · 当前数值未知'
-          else
-            for (final w in a.windows) '${w.period}：${w.summary ?? w.value}',
-          '来源更新 ${a.observed} · 北京时间',
-        ].join('\n'),
+List<Widget> quotaOverviewRows(List<QuotaAccount> accounts) =>
+    quotaPlatformCards(accounts);
+
+QuotaWindow _quotaFeaturedWindow(QuotaAccount account) {
+  final windows = [...account.windows]
+    ..sort((a, b) => (a.remaining ?? 101).compareTo(b.remaining ?? 101));
+  return windows.first;
+}
+
+class QuotaOverviewCard extends StatelessWidget {
+  const QuotaOverviewCard({
+    super.key,
+    required this.accounts,
+    this.status,
+    this.onDetails,
+  });
+  final List<QuotaAccount> accounts;
+  final Widget? status;
+  final VoidCallback? onDetails;
+
+  @override
+  Widget build(BuildContext context) {
+    final directCursor = accounts.any(
+      (a) => a.platform == 'Cursor' && a.source == '直接采集',
+    );
+    final sorted =
+        accounts
+            .where(
+              (a) =>
+                  !(directCursor &&
+                      a.platform == 'Cursor' &&
+                      a.source == '推送采集'),
+            )
+            .toList()
+          ..sort((a, b) {
+            int rank(QuotaAccount a) => a.low
+                ? 0
+                : a.unavailable
+                ? 3
+                : a.windows.isEmpty
+                ? 2
+                : 1;
+            return rank(a).compareTo(rank(b));
+          });
+    final featured = <QuotaAccount>[];
+    for (final account in sorted) {
+      if (featured.any((a) => a.platform == account.platform)) continue;
+      featured.add(account);
+      if (featured.length == 2) break;
+    }
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      color: Colors.white,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: const BorderSide(color: Color(0xFFDDE8F6)),
       ),
-    ),
-];
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        key: const ValueKey('business-AI额度'),
+        title: const Text(
+          'AI额度',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final account in featured)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      quotaBrandMark(account.platform),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${account.platform}${accounts.where((a) => a.platform == account.platform).length > 1 ? ' · ${account.name}' : ''}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: sceneMuted,
+                              ),
+                            ),
+                            Text(
+                              account.unavailable
+                                  ? account.status
+                                  : account.windows.isEmpty
+                                  ? '额度未知'
+                                  : _quotaFeaturedWindow(account).summary ??
+                                        _quotaFeaturedWindow(account).value,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: account.unavailable || account.low
+                                    ? sceneAmber
+                                    : sceneInk,
+                              ),
+                            ),
+                            if (!account.unavailable &&
+                                account.windows.isNotEmpty)
+                              Text(
+                                _quotaFeaturedWindow(account).reset,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: sceneMuted,
+                                ),
+                              ),
+                            Text(
+                              '来源更新 ${account.observed} · 北京时间',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: sceneMuted,
+                              ),
+                            ),
+                            Text(
+                              '套餐到期：${quotaDateText(account.expiresAt)}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: sceneMuted,
+                              ),
+                            ),
+                            if (account.periodEnd != null)
+                              Text(
+                                '套餐周期结束：${quotaDateText(account.periodEnd)}',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: sceneMuted,
+                                ),
+                              ),
+                            Text(
+                              '最近充值：${quotaDateText(account.rechargedAt)}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: sceneMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              Text(
+                '${accounts.map((a) => a.platform).toSet().length} 个平台 · ${accounts.where((a) => a.low || a.unavailable).length} 个来源需关注',
+                style: const TextStyle(fontSize: 12, color: sceneMuted),
+              ),
+              if (accounts.isEmpty) const Text('暂未取得额度数据'),
+              if (status != null) status!,
+            ],
+          ),
+        ),
+        childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        children: [
+          ...quotaPlatformCards(accounts),
+          if (onDetails != null)
+            TextButton(onPressed: onDetails, child: const Text('查看完整详情与历史')),
+        ],
+      ),
+    );
+  }
+}
 
 List<String> purchaseOverview(Map<String, dynamic> data, String group) {
   final overview = sceneMap(data['overview']);

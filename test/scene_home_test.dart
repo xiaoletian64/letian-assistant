@@ -114,8 +114,14 @@ void main() {
       await t.ensureVisible(summary);
       await t.tap(find.text('AI额度'));
       await t.pumpAndSettle();
-      expect(find.text('Codex · 主账号'), findsOneWidget);
-      expect(find.text('Codex · 备用账号'), findsOneWidget);
+      final platform = find.byKey(const ValueKey('quota-platform-Codex'));
+      await t.ensureVisible(platform);
+      await t.tap(
+        find.descendant(of: platform, matching: find.text('Codex')).first,
+      );
+      await t.pumpAndSettle();
+      expect(find.text('主账号'), findsOneWidget);
+      expect(find.text('备用账号'), findsOneWidget);
       expect(find.textContaining('每月窗口'), findsWidgets);
       await t.ensureVisible(find.byKey(const ValueKey('hospital-entry')));
       await t.tap(find.byKey(const ValueKey('hospital-entry')));

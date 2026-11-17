@@ -610,13 +610,11 @@ class _SceneShellState extends State<SceneShell> with WidgetsBindingObserver {
                     if (allowed('quota') && show('AI工作'))
                       KeyedSubtree(
                         key: quotaKey,
-                        child: BusinessSummaryCard(
+                        child: QuotaOverviewCard(
                           key: ValueKey('quota-overview-$username'),
-                          title: 'AI额度',
-                          lines: quotaOverview(accounts),
+                          accounts: accounts,
                           status: status('quota'),
                           onDetails: () => open('quota'),
-                          children: quotaOverviewRows(accounts),
                         ),
                       ),
                     if (allowed('purchases') && show('居家')) ...[
@@ -1110,7 +1108,7 @@ class QuotaAccountCard extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: LinearProgressIndicator(
-                  value: window.remaining! / 100,
+                  value: (window.remaining! / 100).clamp(0.0, 1.0),
                   minHeight: 6,
                   color: color,
                   backgroundColor: const Color(0xFFDFEAFC),
@@ -1168,7 +1166,7 @@ class QuotaAccountCard extends StatelessWidget {
               runSpacing: 6,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                if (showPlatform) quotaBrandMark(account.platform),
+                quotaBrandMark(account.platform),
                 if (showPlatform)
                   Text(
                     account.platform,
@@ -1207,6 +1205,20 @@ class QuotaAccountCard extends StatelessWidget {
             Text(
               '来源更新 ${account.observed} · 北京时间',
               style: const TextStyle(fontSize: 11, color: sceneMuted),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              '套餐到期：${quotaDateText(account.expiresAt)}',
+              style: const TextStyle(fontSize: 12, color: sceneMuted),
+            ),
+            if (account.periodEnd != null)
+              Text(
+                '套餐周期结束：${quotaDateText(account.periodEnd)}',
+                style: const TextStyle(fontSize: 12, color: sceneMuted),
+              ),
+            Text(
+              '最近充值：${quotaDateText(account.rechargedAt)}',
+              style: const TextStyle(fontSize: 12, color: sceneMuted),
             ),
             if (unavailable) ...[
               const SizedBox(height: 12),

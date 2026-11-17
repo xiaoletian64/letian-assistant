@@ -47,6 +47,14 @@ String sceneTime(dynamic value, {String missing = '来源时间未提供'}) {
   return '${d.year}-${two(d.month)}-${two(d.day)} ${two(d.hour)}:${two(d.minute)}';
 }
 
+String quotaDateText(dynamic value) {
+  if (sceneDate(value) == null) return '未提供';
+  final explicitZone =
+      sceneNumber(value) != null ||
+      RegExp(r'(Z|[+-]\d\d:?\d\d)$').hasMatch('$value');
+  return '${sceneTime(value)}${explicitZone ? '（北京时间）' : '（来源时区未提供）'}';
+}
+
 class QuotaWindow {
   const QuotaWindow(
     this.period,
@@ -68,10 +76,14 @@ class QuotaAccount {
     dynamic sourceTime,
     this.error = '',
     this.source = '',
+    this.expiresAt,
+    this.rechargedAt,
+    this.periodEnd,
   }) : observed = sceneTime(sourceTime),
        sourceDate = sceneDate(sourceTime);
   final String platform, name, observed, error, source;
   final DateTime? sourceDate;
+  final dynamic expiresAt, rechargedAt, periodEnd;
   final List<QuotaWindow> windows;
   bool get stale =>
       sourceDate == null ||
@@ -307,6 +319,9 @@ List<QuotaAccount> quotaAccounts(Map raw) {
         '${a['name'] ?? '平台账号'}',
         windows,
         sourceTime: ts,
+        expiresAt: a['plan_expires_at'] ?? a['expires_at'],
+        rechargedAt: a['last_recharge_at'] ?? a['recharged_at'],
+        periodEnd: a['period_end'],
         source: '直接采集',
         error: hasError(a['error'])
             ? errorText(a['error'])
@@ -351,6 +366,8 @@ List<QuotaAccount> quotaAccounts(Map raw) {
               ),
             ],
             sourceTime: group['updated'],
+            expiresAt: a['plan_expires_at'] ?? a['expires_at'],
+            rechargedAt: a['last_recharge_at'] ?? a['recharged_at'],
             source: '推送采集',
             error: errorText(
               a['error'] ??
@@ -465,6 +482,11 @@ List<QuotaAccount> quotaAccounts(Map raw) {
           accountName(e.key, a['n'], i),
           windows,
           sourceTime: ts,
+          expiresAt: a['plan_expires_at'] ?? a['expires_at'],
+          periodEnd:
+              a['period_end'] ??
+              (e.key == 'mimo' ? group['periodEndUTC'] : null),
+          rechargedAt: a['last_recharge_at'] ?? a['recharged_at'],
           source: '推送采集',
           error: errorText(failure),
         ),
@@ -500,6 +522,9 @@ List<QuotaAccount> quotaAccounts(Map raw) {
           sourceTime: a.sourceDate?.toIso8601String(),
           error: '本次查询失败，显示上次观测',
           source: a.source,
+          expiresAt: a.expiresAt,
+          rechargedAt: a.rechargedAt,
+          periodEnd: a.periodEnd,
         );
       }
     }
