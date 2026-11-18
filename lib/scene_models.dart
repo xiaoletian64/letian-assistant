@@ -61,9 +61,11 @@ class QuotaWindow {
     this.value, {
     this.remaining,
     this.reset = '重置时间未提供',
+    this.resetAt,
     this.summary,
   });
   final String period, value, reset;
+  final DateTime? resetAt;
   final String? summary;
   final double? remaining;
 }
@@ -110,6 +112,18 @@ class QuotaAccount {
       : low
       ? '剩余较少'
       : '数据正常';
+
+  /// Earliest upcoming structured reset time across this account's windows.
+  /// Falls back to the latest past reset so stale sources stay inspectable.
+  DateTime? get nextResetAt {
+    final now = DateTime.now().toUtc();
+    final times = windows.map((w) => w.resetAt).whereType<DateTime>().toList()
+      ..sort();
+    for (final t in times) {
+      if (t.isAfter(now)) return t;
+    }
+    return times.isEmpty ? null : times.last;
+  }
 }
 
 List<QuotaAccount> quotaAccounts(Map raw) {
@@ -175,6 +189,7 @@ List<QuotaAccount> quotaAccounts(Map raw) {
       period(w, label),
       remain == null ? '额度待更新' : '剩余 ${sceneDecimal(remain)}%',
       remaining: remain,
+      resetAt: reset == null ? null : sceneDate(reset),
       reset: resetText == '未提供' ? '重置时间未提供' : '$resetText 重置（北京时间）',
     );
   }
@@ -224,6 +239,7 @@ List<QuotaAccount> quotaAccounts(Map raw) {
       '$totalText · $usedText · $leftText${percent == null ? '' : '（${quotaPercent(percent)}%）'}',
       remaining: percent,
       summary: summary,
+      resetAt: sceneDate(q['reset_at']),
       reset: q['reset_at'] == null
           ? '重置时间未提供'
           : '${sceneTime(q['reset_at'])} 重置（北京时间）',

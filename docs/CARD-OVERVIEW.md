@@ -48,3 +48,9 @@ hold the home refresh lock. Entering the account page still checks its current
 state. A new refresh generation clears obsolete pending indicators; late prior
 responses cannot overwrite newer results or a different account. Retrying home
 while an authorization source is slow must issue fresh business requests.
+
+## Donut pie and period reset time on the AI quota card (2.13.6)
+
+收起的 AI 额度卡新增两个信息层：环形饼图与最近周期到时间。饼图为各平台"最紧窗口"剩余百分比的归一化对比展示（不同平台配额不同，仅作视觉对比，绝不合计为总配额）；图例逐平台给出剩余百分比与各自的下一次重置时间。认证失败、过期或无剩余百分比的来源不进入饼图，只在"N 个来源无有效剩余百分比"中计数，未确认值不冒充当前值。
+
+周期到时间取结构化 resetAt（epoch 秒或带时区 ISO），来源为 GLM/OpenCode 的窗口重置、Cursor 的 cycle_end、MiMo 的 reset_at；无未来时间时回退最近一次过去重置并保持可见。最近一条以"最近周期到：时间 · 平台 窗口"展示在收起摘要与平台卡副标题，全部为北京时间口径。320 宽与两倍字号不溢出；饼图为 CustomPainter 实现，不新增依赖。
