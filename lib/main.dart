@@ -38,8 +38,8 @@ bool _updateDialogVisible = false;
 
 String get baseUrl => runtimeConfig.apiBaseUrl;
 String get otaUrl => runtimeConfig.updateManifestUrl;
-const currentVersion = '2.13.6';
-const currentVersionCode = 53;
+const currentVersion = '2.13.7';
+const currentVersionCode = 54;
 
 Future<Map<String, dynamic>?> checkOta() async {
   if (defaultTargetPlatform == TargetPlatform.iOS ||

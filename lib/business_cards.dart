@@ -105,15 +105,29 @@ List<Widget> quotaCollapsedExtras(List<QuotaAccount> accounts) {
         ),
       ),
     if (quotaNextResetLine(accounts) != null)
-      Padding(
-        padding: const EdgeInsets.only(top: 6),
-        child: Text(
-          quotaNextResetLine(accounts)!,
-          style: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            color: sceneInk,
-          ),
+      Container(
+        margin: const EdgeInsets.only(top: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: sceneInk.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(Icons.schedule, size: 13, color: sceneMuted),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                quotaNextResetLine(accounts)!,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: sceneInk,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
   ];
@@ -152,6 +166,11 @@ class _QuotaDonutPainter extends CustomPainter {
       canvas.drawArc(rect, 0, dart_math.pi * 2, false, paint);
       return;
     }
+    final track = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
+      ..color = const Color(0xFFEDF3FC);
+    canvas.drawArc(rect, 0, dart_math.pi * 2, false, track);
     const gap = 0.035; // radians of visual separation between slices.
     var start = -dart_math.pi / 2;
     for (final slice in slices) {
@@ -176,45 +195,84 @@ class _QuotaDonutPainter extends CustomPainter {
 }
 
 Widget quotaPieSummaryRow(List<QuotaPieSlice> slices) {
+  final tightest = slices.isEmpty ? null : slices.first;
   return Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
+    crossAxisAlignment: CrossAxisAlignment.center,
     children: [
-      QuotaDonutChart(slices: slices),
-      const SizedBox(width: 12),
+      Stack(
+        alignment: Alignment.center,
+        children: [
+          QuotaDonutChart(slices: slices, size: 84),
+          if (tightest != null)
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '${sceneDecimal(tightest.remaining)}%',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: sceneInk,
+                  ),
+                ),
+                const Text(
+                  '最紧',
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w600,
+                    color: sceneMuted,
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+      const SizedBox(width: 14),
       Expanded(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               '剩余额度分布',
-              style: const TextStyle(
-                fontSize: 11,
+              style: TextStyle(
+                fontSize: 12,
                 fontWeight: FontWeight.w700,
-                color: sceneMuted,
+                color: sceneInk,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             for (final slice in slices)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
+              Container(
+                margin: const EdgeInsets.only(top: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 9,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: slice.color.withValues(alpha: 0.09),
+                  borderRadius: BorderRadius.circular(9),
+                ),
                 child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Container(
                       width: 9,
                       height: 9,
-                      margin: const EdgeInsets.only(top: 4),
                       decoration: BoxDecoration(
                         color: slice.color,
                         shape: BoxShape.circle,
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 7),
                     Expanded(
                       child: Text(
                         '${slice.label} 剩余 ${sceneDecimal(slice.remaining)}%'
                         '${slice.resetAt == null ? '' : ' · ${sceneTime(slice.resetAt!.toIso8601String())} 到'}',
-                        style: const TextStyle(fontSize: 11, color: sceneMuted),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: sceneInk,
+                        ),
                       ),
                     ),
                   ],
