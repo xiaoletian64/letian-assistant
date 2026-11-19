@@ -17,6 +17,7 @@ import 'package:flyer_chat_text_message/flyer_chat_text_message.dart'
 part 'home_devices.dart';
 part 'runtime_config.dart';
 part 'server_monitor.dart';
+part 'skill_health.dart';
 part 'quota_history.dart';
 part 'tibo_card.dart';
 part 'ios_sync.dart';
@@ -38,8 +39,8 @@ bool _updateDialogVisible = false;
 
 String get baseUrl => runtimeConfig.apiBaseUrl;
 String get otaUrl => runtimeConfig.updateManifestUrl;
-const currentVersion = '2.13.7';
-const currentVersionCode = 54;
+const currentVersion = '2.13.8';
+const currentVersionCode = 55;
 
 Future<Map<String, dynamic>?> checkOta() async {
   if (defaultTargetPlatform == TargetPlatform.iOS ||

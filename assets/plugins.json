@@ -191,6 +191,16 @@
       "renderer": "server-monitor",
       "min_client_code": 44,
       "owner_only": true
+    },
+    {
+      "id": "skill-health",
+      "title": "服务体检",
+      "subtitle": "每日接口健康检查结果",
+      "group": "服务管理",
+      "category": "开发运维",
+      "icon": "desktop",
+      "renderer": "skill-health",
+      "min_client_code": 55
     }
   ]
 }

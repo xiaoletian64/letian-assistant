@@ -38,6 +38,8 @@ Widget pluginDestination(Map<String, dynamic> descriptor) {
         id: '${descriptor['id']}',
         title: '${descriptor['title']}',
       );
+    case 'skill-health':
+      return const SkillHealthPage();
     case 'server-monitor':
       return const ServerMonitorPage();
     case 'devices':
