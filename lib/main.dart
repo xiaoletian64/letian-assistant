@@ -18,6 +18,7 @@ part 'home_devices.dart';
 part 'runtime_config.dart';
 part 'server_monitor.dart';
 part 'skill_health.dart';
+part 'arch_graph.dart';
 part 'quota_history.dart';
 part 'tibo_card.dart';
 part 'ios_sync.dart';
@@ -39,8 +40,8 @@ bool _updateDialogVisible = false;
 
 String get baseUrl => runtimeConfig.apiBaseUrl;
 String get otaUrl => runtimeConfig.updateManifestUrl;
-const currentVersion = '2.13.8';
-const currentVersionCode = 55;
+const currentVersion = '2.13.9';
+const currentVersionCode = 56;
 
 Future<Map<String, dynamic>?> checkOta() async {
   if (defaultTargetPlatform == TargetPlatform.iOS ||

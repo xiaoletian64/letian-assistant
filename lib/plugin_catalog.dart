@@ -40,6 +40,8 @@ Widget pluginDestination(Map<String, dynamic> descriptor) {
       );
     case 'skill-health':
       return const SkillHealthPage();
+    case 'arch-graph':
+      return const ArchGraphPage();
     case 'server-monitor':
       return const ServerMonitorPage();
     case 'devices':

@@ -201,6 +201,16 @@
       "icon": "desktop",
       "renderer": "skill-health",
       "min_client_code": 55
+    },
+    {
+      "id": "arch-graph",
+      "title": "架构节点图",
+      "subtitle": "服务器·服务·技能全景，点节点看详情",
+      "group": "服务管理",
+      "category": "开发运维",
+      "icon": "account_tree",
+      "renderer": "arch-graph",
+      "min_client_code": 56
     }
   ]
 }
